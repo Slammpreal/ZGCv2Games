@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ZGCV2 | Play Roblox Online</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #000;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      color: #fff;
+    }
+
+    /* ── ASSET GATE ── */
+    #asset-gate {
+      position: fixed; inset: 0;
+      background: #111;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 9999; gap: 16px;
+      transition: opacity 0.6s ease;
+    }
+    #asset-gate.hidden { opacity: 0; pointer-events: none; }
+    #asset-gate p { font-size: 13px; color: #888; letter-spacing: 0.05em; }
+    .gate-spinner {
+      width: 36px; height: 36px;
+      border: 3px solid #333; border-top-color: #e8192c;
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+
+    /* ── BG VIDEO ── */
+    #bg-video {
+      position: fixed; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; z-index: 0; opacity: 0;
+      transition: opacity 1s ease;
+    }
+    #bg-video.visible { opacity: 1; }
+    #overlay {
+      position: fixed; inset: 0;
+      background: linear-gradient(135deg, rgba(0,0,0,0.72) 0%, rgba(0,0,0,0.50) 50%, rgba(0,0,0,0.78) 100%);
+      z-index: 1;
+    }
+
+    /* ── LOADING SCREEN ── */
+    #loading-screen {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.8s ease;
+    }
+    #loading-screen.visible { opacity: 1; }
+
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; height: 48px;
+      background: rgba(15,15,20,0.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      display: flex; align-items: center; padding: 0 20px; gap: 10px; z-index: 20;
+    }
+    .topbar-logo { font-size: 16px; font-weight: 900; letter-spacing: -0.5px; color: #fff; }
+    .topbar-logo span { color: #e8192c; }
+    .topbar-sep { width: 1px; height: 18px; background: rgba(255,255,255,0.15); margin: 0 4px; }
+    .topbar-game { font-size: 12px; color: #aaa; font-weight: 600; }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+    .topbar-btn {
+      font-family: 'Nunito', sans-serif; font-size: 11px; font-weight: 700;
+      padding: 5px 12px; border-radius: 6px; border: none; cursor: pointer;
+      background: rgba(255,255,255,0.08); color: #ccc; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: rgba(255,255,255,0.14); }
+    .topbar-btn.primary { background: #e8192c; color: #fff; }
+    .topbar-btn.primary:hover { background: #c8101e; }
+
+    .card {
+      display: flex; flex-direction: column; align-items: center; gap: 28px;
+      padding: 48px 52px 42px;
+      background: rgba(12,12,18,0.72); backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; min-width: 380px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    }
+    .game-logo {
+      width: 110px; height: 110px; border-radius: 22px; object-fit: cover;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.1);
+    }
+    .game-title { font-size: 22px; font-weight: 900; letter-spacing: -0.3px; color: #fff; text-align: center; }
+    .status-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #8be8a0; font-weight: 700; }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #4ade80; box-shadow: 0 0 6px #4ade80;
+      animation: pulse-dot 1.4s ease-in-out infinite;
+    }
+    .progress-wrap { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .progress-label-row { display: flex; justify-content: space-between; align-items: center; }
+    .progress-label { font-size: 11px; font-weight: 700; color: #888; letter-spacing: 0.06em; text-transform: uppercase; }
+    .progress-pct { font-size: 13px; font-weight: 900; color: #fff; }
+    .progress-track { width: 100%; height: 8px; background: rgba(255,255,255,0.08); border-radius: 99px; overflow: hidden; }
+    .progress-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #e8192c, #ff6b35);
+      border-radius: 99px; transition: width 0.25s ease; position: relative;
+    }
+    .progress-fill::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 30px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35));
+      border-radius: 99px; animation: shimmer 1s ease-in-out infinite;
+    }
+    .step-text { font-size: 12px; color: #666; font-weight: 600; min-height: 18px; transition: opacity 0.3s; text-align: center; }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .badge {
+      font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 6px;
+      background: rgba(255,255,255,0.06); color: #777;
+      border: 1px solid rgba(255,255,255,0.07); letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .tip-wrap {
+      position: fixed; bottom: 28px; left: 0; right: 0;
+      display: flex; justify-content: center; z-index: 11; opacity: 0; transition: opacity 0.8s ease;
+    }
+    .tip-wrap.visible { opacity: 1; }
+    .tip-box {
+      background: rgba(10,10,16,0.78); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.07); border-radius: 10px;
+      padding: 10px 20px; font-size: 11px; color: #666; font-weight: 600;
+      max-width: 480px; text-align: center;
+    }
+    .tip-box strong { color: #aaa; }
+
+    /* ── PLAY SCREEN ── */
+    #play-screen {
+      position: fixed; inset: 0; z-index: 150;
+      background: rgba(0,0,0,0);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.6s ease, background 0.6s ease, backdrop-filter 0.6s ease;
+    }
+    #play-screen.visible {
+      opacity: 1; pointer-events: all;
+      background: rgba(0,0,0,0.84);
+      backdrop-filter: blur(8px);
+    }
+
+    .play-card {
+      display: flex; flex-direction: column; align-items: center; gap: 24px;
+      padding: 56px 64px 50px;
+      background: rgba(8,8,14,0.92);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 28px;
+      box-shadow:
+        0 48px 120px rgba(0,0,0,0.9),
+        0 0 0 1px rgba(255,255,255,0.04) inset,
+        0 0 60px rgba(232,25,44,0.06);
+      transform: translateY(28px) scale(0.94);
+      opacity: 0;
+      transition: transform 0.55s cubic-bezier(0.34,1.56,0.64,1), opacity 0.45s ease;
+      max-width: 440px; text-align: center;
+    }
+    #play-screen.visible .play-card {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .play-pulse-ring {
+      position: relative; width: 90px; height: 90px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .play-pulse-ring::before,
+    .play-pulse-ring::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 2px solid rgba(232,25,44,0.35);
+      animation: ring-expand 2s ease-out infinite;
+    }
+    .play-pulse-ring::after { animation-delay: 1s; }
+
+    .play-icon-btn {
+      width: 80px; height: 80px; border-radius: 50%;
+      background: linear-gradient(135deg, #e8192c 0%, #c8101e 100%);
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 12px 40px rgba(232,25,44,0.5);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      position: relative; z-index: 2;
+      flex-shrink: 0;
+    }
+    .play-icon-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 16px 50px rgba(232,25,44,0.65);
+    }
+    .play-icon-btn:active { transform: scale(0.95); }
+    .play-icon-btn svg { width: 32px; height: 32px; fill: #fff; margin-left: 5px; }
+
+    .play-title {
+      font-size: 24px; font-weight: 900; color: #fff; letter-spacing: -0.4px;
+    }
+    .play-sub {
+      font-size: 13px; color: #555; font-weight: 600; line-height: 1.6;
+      max-width: 280px;
+    }
+    .play-sub em { color: #888; font-style: normal; }
+
+    .play-launch-btn {
+      font-family: 'Nunito', sans-serif;
+      font-size: 16px; font-weight: 900;
+      padding: 15px 52px; border-radius: 14px;
+      border: none; cursor: pointer;
+      background: linear-gradient(135deg, #e8192c 0%, #c0101d 100%);
+      color: #fff;
+      box-shadow: 0 8px 28px rgba(232,25,44,0.45);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .play-launch-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 40px rgba(232,25,44,0.6);
+    }
+    .play-launch-btn:active { transform: translateY(0); }
+    .play-launch-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+
+    .play-powered {
+      font-size: 10px; color: #333; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .play-powered span { color: #e8192c; }
+
+    /* ── CINEMATIC FLASH ── */
+    #cinematic-flash {
+      position: fixed; inset: 0; z-index: 300;
+      background: #fff; opacity: 0; pointer-events: none;
+    }
+
+    /* ── MEME VIDEO ── */
+    #meme-screen {
+      position: fixed; inset: 0; z-index: 100;
+      background: #000; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; visibility: hidden;
+    }
+    #meme-screen.show { opacity: 1; pointer-events: all; visibility: visible; }
+    #meme-video {
+      width: 100%; height: 100%; object-fit: contain;
+      visibility: hidden;
+    }
+    #meme-video.revealed { visibility: visible; }
+
+    /* ── KEYFRAMES ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.5; transform: scale(0.8); }
+    }
+    @keyframes shimmer {
+      0%, 100% { opacity: 0.3; }
+      50%       { opacity: 1; }
+    }
+    @keyframes ring-expand {
+      0%   { transform: scale(0.9); opacity: 0.7; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ASSET GATE -->
+  <div id="asset-gate">
+    <div class="gate-spinner"></div>
+    <p>Loading assets…</p>
+  </div>
+
+  <!-- BG VIDEO -->
+  <video id="bg-video" src="loading.mp4" autoplay muted loop playsinline></video>
+  <div id="overlay"></div>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <div class="topbar">
+      <div class="topbar-logo">ZGCV<span>2</span></div>
+      <div class="topbar-sep"></div>
+      <div class="topbar-game">Roblox</div>
+      <div class="topbar-right">
+        <button class="topbar-btn">Share</button>
+        <button class="topbar-btn primary">Install App</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <img class="game-logo" src="roblox.png" alt="Roblox" id="roblox-logo" />
+      <div class="game-title">Roblox</div>
+      <div class="status-row">
+        <div class="status-dot"></div>
+        <span>Connecting to game server…</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label-row">
+          <span class="progress-label">Loading</span>
+          <span class="progress-pct" id="pct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" id="bar"></div>
+        </div>
+        <div class="step-text" id="step-text">Initializing…</div>
+      </div>
+      <div class="badges">
+        <div class="badge">🔒 Secure</div>
+        <div class="badge">⚡ Low Latency</div>
+        <div class="badge">☁️ Cloud Powered</div>
+        <div class="badge">🎮 No Download</div>
+      </div>
+    </div>
+
+    <div class="tip-wrap visible">
+      <div class="tip-box">
+        <strong>TIP:</strong> You can play Roblox instantly on any device with ZGCV2 — no downloads required.
+      </div>
+    </div>
+  </div>
+
+  <!-- PLAY SCREEN -->
+  <div id="play-screen">
+    <div class="play-card">
+      <div class="play-pulse-ring">
+        <button class="play-icon-btn" id="play-icon-btn">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+      </div>
+      <div class="play-title">Roblox is Ready!</div>
+      <div class="play-sub">
+        Your cloud session has been initialized.<br>
+        <em>Click below to enter the game.</em>
+      </div>
+      <button class="play-launch-btn" id="play-launch-btn">▶ &nbsp; Launch Game</button>
+      <div class="play-powered">Powered by <span>ZGCV2</span> Cloud</div>
+    </div>
+  </div>
+
+  <!-- WHITE FLASH -->
+  <div id="cinematic-flash"></div>
+
+  <!-- MEME VIDEO (video hidden via visibility:hidden until after launch click) -->
+  <div id="meme-screen">
+    <video id="meme-video" playsinline preload="none"></video>
+  </div>
+
+  <script>
+    const gate         = document.getElementById('asset-gate');
+    const bgVideo      = document.getElementById('bg-video');
+    const loadScreen   = document.getElementById('loading-screen');
+    const bar          = document.getElementById('bar');
+    const pctEl        = document.getElementById('pct');
+    const stepEl       = document.getElementById('step-text');
+    const playScreen   = document.getElementById('play-screen');
+    const playLaunchBtn= document.getElementById('play-launch-btn');
+    const playIconBtn  = document.getElementById('play-icon-btn');
+    const flashEl      = document.getElementById('cinematic-flash');
+    const memeScreen   = document.getElementById('meme-screen');
+    const memeVideo    = document.getElementById('meme-video');
+    const logo         = document.getElementById('roblox-logo');
+
+    const steps = [
+      { at: 0,   text: 'Initializing cloud session…' },
+      { at: 8,   text: 'Resolving game server…' },
+      { at: 18,  text: 'Authenticating with Roblox…' },
+      { at: 28,  text: 'Downloading game assets…' },
+      { at: 38,  text: 'Loading textures & models…' },
+      { at: 50,  text: 'Setting up virtual environment…' },
+      { at: 62,  text: 'Connecting to Roblox servers…' },
+      { at: 72,  text: 'Syncing player data…' },
+      { at: 82,  text: 'Rendering world…' },
+      { at: 91,  text: 'Almost there…' },
+      { at: 97,  text: 'Launching Roblox…' },
+    ];
+
+    // ── Asset gate ──
+    let bgReady = false, logoReady = false;
+
+    function tryStart() {
+      if (!bgReady || !logoReady) return;
+      gate.classList.add('hidden');
+      bgVideo.classList.add('visible');
+      setTimeout(() => {
+        loadScreen.classList.add('visible');
+        startLoading();
+      }, 600);
+    }
+
+    bgVideo.addEventListener('canplay', () => { bgReady = true; tryStart(); }, { once: true });
+    if (bgVideo.readyState >= 3) { bgReady = true; }
+
+    logo.addEventListener('load',  () => { logoReady = true; tryStart(); }, { once: true });
+    logo.addEventListener('error', () => { logoReady = true; tryStart(); }, { once: true });
+    if (logo.complete) { logoReady = true; tryStart(); }
+
+    // ── Fake progress ──
+    function startLoading() {
+      let pct = 0;
+
+      function tick() {
+        if (pct >= 100) {
+          bar.style.width = '100%';
+          pctEl.textContent = '100%';
+          stepEl.textContent = 'Done!';
+          setTimeout(showPlayScreen, 520);
+          return;
+        }
+
+        let inc;
+        if (pct < 30)       inc = Math.random() * 3.5 + 1.5;
+        else if (pct < 55)  inc = Math.random() * 2.0 + 0.5;
+        else if (pct < 75)  inc = Math.random() * 1.5 + 0.3;
+        else if (pct < 90)  inc = Math.random() * 2.5 + 0.8;
+        else                inc = Math.random() * 1.2 + 0.4;
+
+        pct = Math.min(100, pct + inc);
+        const p = Math.floor(pct);
+        bar.style.width = pct + '%';
+        pctEl.textContent = p + '%';
+
+        for (let i = steps.length - 1; i >= 0; i--) {
+          if (p >= steps[i].at) {
+            if (stepEl.textContent !== steps[i].text) stepEl.textContent = steps[i].text;
+            break;
+          }
+        }
+
+        let delay;
+        if (pct < 25)       delay = 60  + Math.random() * 40;
+        else if (pct < 50)  delay = 120 + Math.random() * 200;
+        else if (pct < 70)  delay = 150 + Math.random() * 300;
+        else if (pct < 85)  delay = 80  + Math.random() * 120;
+        else                delay = 60  + Math.random() * 80;
+
+        setTimeout(tick, delay);
+      }
+
+      tick();
+    }
+
+    // ── After loading completes: hide loading, show play screen over black ──
+    function showPlayScreen() {
+      loadScreen.style.opacity = '0';
+      bgVideo.style.opacity = '0';
+
+      // Pre-load meme video src silently
+      memeVideo.src = 'meme.mp4';
+      memeVideo.load();
+
+      setTimeout(() => {
+        loadScreen.style.display = 'none';
+        // DON'T show meme screen yet — just show play screen over black body bg
+        playScreen.classList.add('visible');
+      }, 700);
+    }
+
+    // ── Cinematic launch sequence ──
+    function launchCinematic() {
+      playLaunchBtn.disabled = true;
+      playIconBtn.disabled   = true;
+
+      const card = document.querySelector('.play-card');
+
+      // 1) Card zooms out + fades
+      card.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
+      card.style.transform  = 'scale(1.06)';
+      card.style.opacity    = '0';
+
+      setTimeout(() => {
+        // 2) Full black
+        playScreen.style.transition = 'background 0.3s ease, backdrop-filter 0.3s ease, opacity 0.3s ease';
+        playScreen.style.backdropFilter = 'blur(0px)';
+        playScreen.style.background = 'rgba(0,0,0,1)';
+
+        setTimeout(() => {
+          // 3) White flash
+          flashEl.style.transition = 'opacity 0.06s linear';
+          flashEl.style.opacity = '1';
+
+          setTimeout(() => {
+            // 4) Flash out, reveal video, play
+            flashEl.style.transition = 'opacity 0.55s ease-out';
+            flashEl.style.opacity = '0';
+
+            memeScreen.classList.add('show');     // bring meme screen in
+            memeVideo.classList.add('revealed');  // make video visible
+            playScreen.style.opacity = '0';
+            playScreen.style.pointerEvents = 'none';
+
+            const p = memeVideo.play();
+            if (p) p.catch(() => {});
+
+          }, 110);
+        }, 280);
+      }, 380);
+    }
+
+    playLaunchBtn.addEventListener('click', launchCinematic);
+    playIconBtn.addEventListener('click', launchCinematic);
+  </script>
+</body>
+</html>

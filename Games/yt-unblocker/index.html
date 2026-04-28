@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZGC YT Watcher v1</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300&display=swap" rel="stylesheet">
+
+<!-- Particles.js -->
+<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
+<style>
+/* General Styles */
+body {
+  margin: 0;
+  font-family: 'Fredoka', sans-serif;
+  background: linear-gradient(to bottom, #1e88e5, #00008b);
+  color: white;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#particles-js {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+/* Navigation */
+nav {
+  margin-top: 20px;
+}
+
+.headinglink, .animbutton, .homebutton {
+  font-weight: bold;
+  border-radius: 10px;
+  border: none;
+  padding: 8px 16px;
+  margin: 5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.headinglink:hover, .animbutton:hover, .homebutton:hover {
+  transform: translateY(-2px);
+  background-color: rgba(255,255,255,0.2);
+}
+
+.headinglink:active, .animbutton:active, .homebutton:active {
+  transform: translateY(0);
+  background-color: rgba(255,255,255,0.4);
+}
+
+/* Input */
+.input-container input {
+  padding: 8px 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 2px solid white;
+  width: 300px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Buttons */
+#launch, #copy {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 18px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#launch { background-color: #58C114; }
+#launch:hover { background-color: #4BA611; }
+#copy { background-color: #AB47BC; }
+#copy:hover { background-color: #963EA5; }
+
+/* Feedback */
+#feedbackMessage {
+  margin: 10px auto;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: bold;
+  display: inline-block;
+}
+
+/* Video Container */
+#videoPlayersContainer {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.video-unit-wrapper {
+  position: relative;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.video-display iframe {
+  border-radius: 10px;
+  width: 640px;
+  height: 360px;
+}
+
+.size-button {
+  margin: 5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.fade-in.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
+</head>
+<body>
+
+<div id="particles-js"></div>
+
+<nav>
+  <button class="headinglink fade-in" onclick="home()">Zayaan Youtube Watcher v1</button>
+  <br>
+  <button class="animbutton fade-in" onclick="home()" disabled>free vbucks</button>
+  <button class="animbutton fade-in" onclick="suggestions()">Site</button>
+</nav>
+
+<h1 id="title" class="fade-in">Youtube Watcher</h1>
+
+<div id="instructions" class="fade-in">
+  <h2>How To Use:</h2>
+  <h3>Paste your YouTube video link in the box and press LAUNCH or Enter.</h3>
+  <h3>Use + / - to resize video, ↻ to reset.</h3>
+</div>
+
+<div class="input-container fade-in">
+  <input type="text" id="link" placeholder="YouTube link here">
+</div>
+
+<button id="launch" class="fade-in">LAUNCH</button>
+<button id="copy" class="fade-in" onclick="copy_link()">COPY</button>
+
+<div id="feedbackMessage"></div>
+
+<div id="videoPlayersContainer" class="fade-in"></div>
+
+<script>
+// Particles
+particlesJS("particles-js", {
+    particles: { number: { value: 100 }, color: { value: "#fff" }, shape: { type: "circle" }, opacity: { value: 0.5 }, size: { value: 3 }, line_linked: { enable: false }, move: { enable: true, speed: 3, direction: "top", random: true } },
+    interactivity: { detect_on: "canvas", events: { onhover: { enable: false }, onclick: { enable: false }, resize: true } },
+    retina_detect: true
+});
+
+// JS
+const urlInput = document.getElementById("link");
+const launch = document.getElementById("launch");
+const feedbackMessage = document.getElementById("feedbackMessage");
+const videoPlayersContainer = document.getElementById("videoPlayersContainer");
+const INITIAL_VIDEO_WIDTH = 640;
+const INITIAL_VIDEO_HEIGHT = 360;
+const RESIZE_STEP = 0.1;
+const ASPECT_RATIO = 0.5625;
+let lastVideoWrapper = null;
+
+function suggestions() { window.open("https://zgcv2.netlify.app","_blank"); }
+function home() { window.scrollTo(0,0); }
+
+function addVideoPlayer(videoId) {
+  const wrapper = document.createElement('div');
+  wrapper.classList.add('video-unit-wrapper','fade-in');
+  const iframe = document.createElement('iframe');
+  iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}`;
+  iframe.width = INITIAL_VIDEO_WIDTH;
+  iframe.height = INITIAL_VIDEO_HEIGHT;
+  iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+  iframe.allowFullscreen = true;
+  wrapper.appendChild(iframe);
+  videoPlayersContainer.appendChild(wrapper);
+  wrapper.classList.add('active');
+  lastVideoWrapper = iframe;
+}
+
+function extractVideoId(url) {
+  const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+  const match = url.match(regex);
+  return match ? match[1] : null;
+}
+
+function showFeedback(msg, color) {
+  feedbackMessage.textContent = msg;
+  feedbackMessage.style.color = color || 'white';
+}
+
+launch.addEventListener('click', () => {
+  const url = urlInput.value.trim();
+  const videoId = extractVideoId(url) || "dQw4w9WgXcQ"; // fallback working video
+  if (videoId) {
+    addVideoPlayer(videoId);
+    showFeedback("Video loaded!", "lightgreen");
+  } else {
+    showFeedback("Invalid URL", "red");
+  }
+});
+
+function copy_link() {
+  const videoId = extractVideoId(urlInput.value.trim());
+  if (videoId) {
+    navigator.clipboard.writeText(`https://www.youtube-nocookie.com/embed/${videoId}`);
+    showFeedback("Link copied!", "lightgreen");
+  } else { showFeedback("Invalid URL", "red"); }
+}
+
+// Fade-in animation
+window.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.fade-in').forEach(el => el.classList.add('active'));
+});
+</script>
+
+</body>
+</html>
