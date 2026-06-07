@@ -1,12 +1,811 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Imposter - Word Party Game</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/projects/imposter/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Imposter</title>
+    <style>
+        :root {
+            --bg-color: #0b101e;       /* Deep dark blue */
+            --panel-bg: rgba(30, 41, 59, 0.7); /* Semi-transparent Slate 800 */
+            --text-main: #f8fafc;      /* Slate 50 */
+            --text-muted: #94a3b8;     /* Slate 400 */
+            --accent: #3b82f6;         /* Blue 500 */
+            --accent-hover: #60a5fa;   /* Blue 400 */
+            --danger: #f43f5e;         /* Rose 500 */
+            --danger-hover: #fb7185;   /* Rose 400 */
+            --border-color: rgba(255, 255, 255, 0.1);
+            --input-bg: rgba(15, 23, 42, 0.8);
+            
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            --border-radius-lg: 24px;
+            --border-radius-md: 16px;
+            --border-radius-sm: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-family);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Particle Canvas */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            padding: 24px;
+            z-index: 1;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 32px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 
+                        0 0 20px rgba(59, 130, 246, 0.15) inset;
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+            animation: floatIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes floatIn {
+            from { opacity: 0; transform: translateY(20px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        h1, h2, h3 {
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.025em;
+        }
+
+        h1 {
+            font-size: 28px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 32px;
+            color: var(--text-main);
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        }
+
+        h2 { font-size: 22px; }
+        h3 { 
+            font-size: 16px; 
+            color: var(--text-muted); 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            letter-spacing: 0.1em; 
+            margin-bottom: 12px;
+        }
+
+        p {
+            margin-bottom: 24px;
+            color: var(--text-muted);
+        }
+
+        .bold-text {
+            color: var(--text-main);
+            font-weight: 700;
+            font-size: 20px;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: var(--border-radius-sm);
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            outline: none;
+            margin-bottom: 12px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="text"]:focus, select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 16px 20px;
+            font-size: 16px;
+            font-weight: 700;
+            text-align: center;
+            border: none;
+            border-radius: var(--border-radius-md);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-primary:hover { 
+            background-color: var(--accent-hover); 
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn-secondary:hover { 
+            background-color: rgba(255, 255, 255, 0.05); 
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+            box-shadow: 0 0 20px rgba(244, 63, 94, 0.4);
+        }
+
+        .btn-danger:hover { 
+            background-color: var(--danger-hover); 
+            box-shadow: 0 0 30px rgba(244, 63, 94, 0.6);
+        }
+
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .player-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .player-row input { margin-bottom: 0; }
+
+        .btn-remove {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            width: 52px;
+            border-radius: var(--border-radius-sm);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-remove:hover {
+            color: var(--danger);
+            border-color: var(--danger);
+            background-color: rgba(244, 63, 94, 0.1);
+            box-shadow: 0 0 10px rgba(244, 63, 94, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        /* Custom Word Management Section */
+        .custom-words-container {
+            border: 1px dashed var(--border-color);
+            border-radius: var(--border-radius-md);
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.4);
+            margin-bottom: 24px;
+            animation: floatIn 0.3s ease;
+        }
+
+        .word-tags-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 120px;
+            overflow-y: auto;
+            margin-top: 12px;
+            padding: 4px;
+        }
+
+        .word-tag {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--text-main);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.1);
+        }
+
+        .word-tag span {
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: bold;
+            transition: color 0.2s ease;
+        }
+
+        .word-tag span:hover {
+            color: var(--danger);
+        }
+
+        .secret-display {
+            background-color: var(--input-bg);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 40px 16px;
+            text-align: center;
+            border-radius: var(--border-radius-md);
+            margin-bottom: 24px;
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: 0.05em;
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.1);
+        }
+
+        .secret-display.imposter {
+            color: var(--danger);
+            text-shadow: 0 0 20px rgba(244, 63, 94, 0.5);
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(244, 63, 94, 0.1);
+            font-size: 24px;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(11, 16, 30, 0.85);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 24px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius-lg);
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(255, 255, 255, 0.05) inset;
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal h2 { margin-bottom: 16px; text-align: center; }
+        .modal .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 14px;
+            margin-bottom: 16px;
+            display: none;
+            text-align: center;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+        }
+
+        .hidden { display: none !important; }
+        .center-text { text-align: center; }
+        .mt-4 { margin-top: 16px; }
+        .mt-8 { margin-top: 32px; }
+        .mb-2 { margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <canvas id="particles-canvas"></canvas>
+
+    <div class="container">
+        
+        <div id="setup-screen" class="panel active">
+            <h1>Imposter</h1>
+            
+            <div class="form-group">
+                <label>Category</label>
+                <select id="category-select">
+                    <option value="Random">Random Category</option>
+                    <option value="Animals">Animals</option>
+                    <option value="Food">Food</option>
+                    <option value="Movies">Movies</option>
+                    <option value="Places">Places</option>
+                    <option value="Custom">★ Custom List ★</option>
+                </select>
+            </div>
+
+            <div id="custom-words-section" class="custom-words-container hidden">
+                <label>Manage Custom Words</label>
+                <div class="player-row">
+                    <input type="text" id="custom-word-input" placeholder="Type a word and press Enter" style="margin-bottom: 0;">
+                    <button id="add-word-btn" class="btn btn-secondary" style="width: auto; padding: 0 16px;">Add</button>
+                </div>
+                <div id="word-tags-display" class="word-tags-display"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Players (3-8)</label>
+                <div id="player-list" class="player-inputs">
+                    <div class="player-row"><input type="text" placeholder="Player 1" class="player-input"></div>
+                    <div class="player-row"><input type="text" placeholder="Player 2" class="player-input"></div>
+                    <div class="player-row"><input type="text" placeholder="Player 3" class="player-input"></div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="add-player-btn" class="btn btn-secondary">+ Add Player</button>
+            </div>
+
+            <div id="setup-error" class="error-msg">Please enter names for all players.</div>
+            <button id="start-game-btn" class="btn btn-primary">Start Game</button>
+        </div>
+
+        <div id="pass-screen" class="panel">
+            <h1 id="pass-header">Pass Device</h1>
+            
+            <div id="pass-state" class="center-text">
+                <p>Pass the device to:</p>
+                <h2 id="current-player-name" class="bold-text" style="font-size: 28px; color: var(--accent); margin-bottom: 24px;">Player Name</h2>
+                <div class="mt-8">
+                    <button id="reveal-word-btn" class="btn btn-primary">Reveal Word</button>
+                </div>
+            </div>
+
+            <div id="reveal-state" class="hidden">
+                <h3 class="center-text">Your Word Is</h3>
+                <div id="secret-word-display" class="secret-display">Word</div>
+                <button id="hide-word-btn" class="btn btn-secondary mt-4">Hide & Continue</button>
+            </div>
+        </div>
+
+        <div id="game-screen" class="panel">
+            <h1>Discussion</h1>
+            <div class="center-text">
+                <p>All roles have been secretly assigned.</p>
+                <div class="secret-display" style="color: var(--text-main); font-size: 18px; padding: 24px; text-shadow: none; box-shadow: none;">
+                    <span id="starting-player" class="bold-text" style="color: var(--accent);">Player X</span> starts the discussion.
+                </div>
+                <p class="mt-4 mb-2" style="font-size: 14px;">Take turns speaking one word related to the secret category. Then, discuss and vote on who the Imposter is among yourselves.</p>
+            </div>
+            
+            <div class="mt-8">
+                <button id="trigger-reveal-btn" class="btn btn-danger">Reveal Imposter</button>
+            </div>
+        </div>
+
+        <div id="end-screen" class="panel">
+            <h1>Game Over</h1>
+            
+            <div class="center-text">
+                <h3>The Imposter Was</h3>
+                <h2 id="end-imposter-name" class="bold-text" style="color: var(--danger); font-size: 32px; margin-bottom: 32px; text-shadow: 0 0 20px rgba(244, 63, 94, 0.4);">Player Name</h2>
+
+                <h3>The Secret Word Was</h3>
+                <h2 id="end-secret-word" class="bold-text" style="color: var(--accent); font-size: 28px; margin-bottom: 32px; text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);">Word</h2>
+            </div>
+
+            <button id="play-again-btn" class="btn btn-primary">Play Again</button>
+        </div>
+
+    </div>
+
+    <div id="confirmation-modal" class="modal-overlay">
+        <div class="modal">
+            <h2>End the round?</h2>
+            <p class="center-text">Are you sure you want to reveal the Imposter? This will end the current game.</p>
+            <div class="btn-group">
+                <button id="modal-cancel-btn" class="btn btn-secondary">Cancel</button>
+                <button id="modal-confirm-btn" class="btn btn-danger">Confirm Reveal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Particle System ---
+        const canvas = document.getElementById('particles-canvas');
+        const ctx = canvas.getContext('2d');
+        
+        let particles = [];
+        let width, height;
+
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = Math.random() * height;
+                this.size = Math.random() * 2.5 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.1;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                if (this.x < 0 || this.x > width) this.speedX *= -1;
+                if (this.y < 0 || this.y > height) this.speedY *= -1;
+            }
+            draw() {
+                ctx.fillStyle = `rgba(148, 163, 184, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            const numParticles = Math.min(Math.floor(window.innerWidth / 15), 100);
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, width, height);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+            requestAnimationFrame(animateParticles);
+        }
+
+        initParticles();
+        animateParticles();
+
+
+        // --- Word Bank ---
+        const wordBank = {
+            Animals: [
+                "Dog", "Cat", "Elephant", "Tiger", "Lion", "Bear", "Wolf", "Fox", "Deer", "Rabbit", "Mouse", "Rat", "Hamster", "Guinea Pig", "Squirrel", "Raccoon", "Opossum", "Skunk", "Badger", "Beaver", "Porcupine", "Hedgehog", "Mole", "Shrew", "Bat", "Eagle", "Hawk", "Falcon", "Owl", "Crow", "Raven", "Pigeon", "Dove", "Sparrow", "Robin", "Bluejay", "Cardinal", "Woodpecker", "Duck", "Goose", "Swan", "Pelican", "Seagull", "Penguin", "Ostrich", "Emu", "Flamingo", "Parrot", "Peacock", "Turkey", "Chicken", "Pig", "Cow", "Horse", "Sheep", "Goat", "Donkey", "Mule", "Camel", "Llama", "Alpaca", "Giraffe", "Zebra", "Rhino", "Hippo", "Kangaroo", "Koala", "Wombat", "Platypus", "Echidna", "Sloth", "Armadillo", "Anteater", "Monkey", "Chimp", "Gorilla", "Orangutan", "Baboon", "Lemur", "Whale", "Dolphin", "Porpoise", "Seal", "Walrus", "Manatee", "Shark", "Ray", "Salmon", "Tuna", "Bass", "Trout", "Cod", "Flounder", "Crab", "Lobster", "Shrimp", "Squid", "Octopus", "Jellyfish", "Starfish", "Urchin", "Snail", "Slug", "Worm", "Spider", "Scorpion", "Centipede", "Millipede", "Ant", "Bee", "Wasp", "Hornet", "Fly", "Mosquito", "Butterfly", "Moth", "Beetle", "Ladybug", "Grasshopper", "Cricket", "Mantis", "Roach", "Cheetah", "Leopard", "Panther", "Jaguar", "Cougar", "Lynx", "Bobcat", "Hyena", "Meerkat", "Mongoose", "Otter", "Weasel", "Ferret", "Mink", "Wolverine", "Platypus", "Walrus", "Narwhal", "Beluga", "Orca", "Seahorse", "Eel", "Pufferfish", "Goldfish", "Clownfish", "Swordfish", "Toad", "Frog", "Newt", "Salamander", "Chameleon", "Gecko", "Iguana", "Alligator", "Crocodile", "Python", "Cobra", "Viper", "Turtle", "Tortoise"
+            ],
+            Food: [
+                "Apple", "Banana", "Orange", "Grape", "Strawberry", "Blueberry", "Raspberry", "Blackberry", "Melon", "Watermelon", "Cantaloupe", "Honeydew", "Peach", "Plum", "Cherry", "Apricot", "Pear", "Pineapple", "Mango", "Papaya", "Guava", "Kiwi", "Fig", "Date", "Pomegranate", "Coconut", "Lemon", "Lime", "Grapefruit", "Tomato", "Potato", "Onion", "Garlic", "Carrot", "Celery", "Broccoli", "Cauliflower", "Cabbage", "Lettuce", "Spinach", "Kale", "Pepper", "Cucumber", "Zucchini", "Squash", "Pumpkin", "Corn", "Peas", "Beans", "Lentils", "Chickpeas", "Soybeans", "Peanut", "Walnut", "Almond", "Pecan", "Cashew", "Pistachio", "Hazelnut", "Macadamia", "Chestnut", "Wheat", "Rice", "Oats", "Barley", "Rye", "Quinoa", "Bread", "Pasta", "Noodle", "Cereal", "Cracker", "Pretzel", "Chip", "Cookie", "Cake", "Pie", "Pastry", "Muffin", "Brownie", "Donut", "Pancake", "Waffle", "Syrup", "Honey", "Jam", "Jelly", "Butter", "Cheese", "Milk", "Yogurt", "Cream", "Ice Cream", "Egg", "Meat", "Beef", "Pork", "Lamb", "Chicken", "Turkey", "Duck", "Sausage", "Bacon", "Ham", "Steak", "Burger", "Hot Dog", "Pizza", "Taco", "Burrito", "Sandwich", "Soup", "Stew", "Salad", "Sauce", "Gravy", "Salt", "Pepper", "Sugar", "Spice", "Herb", "Tea", "Coffee", "Juice", "Water", "Soda", "Wine", "Beer", "Liquor", "Chocolate", "Caramel", "Vanilla", "Mint", "Cinnamon", "Nutmeg", "Bagel", "Croissant", "Toast", "Omelet", "Wonton", "Dumpling", "Nugget", "Meatball", "Lasagna", "Spaghetti", "Macaroni", "Ramen", "Sushi", "Sashimi", "Tempura", "Kebab", "Curry", "Risotto", "Paella", "Chili", "Chowder", "Biscuit", "Fudge", "Toffee", "Pudding", "Custard", "Marshmallow", "Gummy Bear", "Lollipop", "Milkshake", "Lemonade", "Smoothie", "Cider"
+            ],
+            Movies: [
+                "Titanic", "Avatar", "Star Wars", "Jurassic Park", "The Avengers", "The Lion King", "Frozen", "Toy Story", "Finding Nemo", "Shrek", "Harry Potter", "The Lord of the Rings", "Spider-Man", "Batman", "Superman", "Wonder Woman", "Iron Man", "Captain America", "Thor", "Black Panther", "The Matrix", "Inception", "Interstellar", "Gravity", "The Martian", "E.T.", "Jaws", "Indiana Jones", "Back to the Future", "Ghostbusters", "The Terminator", "Alien", "Predator", "Die Hard", "Lethal Weapon", "Rambo", "Rocky", "The Godfather", "Goodfellas", "Pulp Fiction", "Fight Club", "The Shawshank Redemption", "Forrest Gump", "Gladiator", "Braveheart", "Saving Private Ryan", "Schindler's List", "The Sound of Music", "The Wizard of Oz", "Gone with the Wind", "Casablanca", "Citizen Kane", "Psycho", "The Birds", "Jumanji", "The Goonies", "Home Alone", "Elf", "The Grinch", "A Christmas Story", "Halloween", "Friday the 13th", "A Nightmare on Elm Street", "Scream", "Saw", "The Conjuring", "It", "The Exorcist", "The Shining", "Poltergeist", "Ghost", "Dirty Dancing", "Grease", "Footloose", "Flashdance", "Top Gun", "Mission Impossible", "James Bond", "Bourne Identity", "Fast and Furious", "Transformers", "Pirates of the Caribbean", "The Hunger Games", "Twilight", "Divergent", "The Maze Runner", "Dune", "Blade Runner", "Mad Max", "The Fifth Element", "Men in Black", "Independence Day", "The Truman Show", "Groundhog Day", "The Sixth Sense", "Signs", "The Village", "Unbreakable", "Split", "Glass", "Get Out", "Us", "Nope", "Black Swan", "Requiem for a Dream", "Pi", "The Fountain", "The Wrestler", "Black Widow", "Doctor Strange", "Ant-Man", "Guardians of the Galaxy", "Captain Marvel", "Eternals", "Shang-Chi", "Venom", "Deadpool", "Logan", "X-Men", "Fantastic Four", "Justice League", "Aquaman", "The Flash", "Shutter Island", "Se7en", "The Silence of the Lambs", "The Departed", "The Prestige", "Memento", "Aladdin", "Mulan", "Tarzan", "Hercules", "Moana", "Zootopia", "Ratatouille", "Cars", "Up", "Wall-E", "Coco", "Encanto", "Sing", "Minions", "Despicable Me", "Madagascar", "Kung Fu Panda", "Ice Age", "Rio", "Shrek", "Megamind", "How to Train Your Dragon", "Coraline", "The Nightmare Before Christmas", "Spirited Away", "My Neighbor Totoro", "The Green Mile", "Good Will Hunting", "Whiplash", "La La Land", "The Great Gatsby", "The Notebook", "Pearl Harbor", "Armageddon", "Apollo 13", "Cast Away", "Sully"
+            ],
+            Places: [
+                "School", "Hospital", "Bank", "Post Office", "Police Station", "Fire Station", "Library", "Museum", "Art Gallery", "Theater", "Cinema", "Park", "Playground", "Zoo", "Aquarium", "Theme Park", "Stadium", "Arena", "Gym", "Swimming Pool", "Beach", "Mountain", "Forest", "Jungle", "Desert", "Island", "Lake", "River", "Ocean", "Sea", "Waterfall", "Cave", "Volcano", "Canyon", "Valley", "City", "Town", "Village", "Suburb", "Countryside", "Farm", "Ranch", "Barn", "Greenhouse", "Factory", "Warehouse", "Office", "Skyscraper", "Apartment", "House", "Mansion", "Castle", "Palace", "Fort", "Tower", "Bridge", "Tunnel", "Highway", "Road", "Street", "Alley", "Sidewalk", "Crosswalk", "Parking Lot", "Garage", "Gas Station", "Car Wash", "Dealership", "Supermarket", "Grocery Store", "Convenience Store", "Mall", "Department Store", "Clothing Store", "Shoe Store", "Electronics Store", "Bookstore", "Toy Store", "Pet Store", "Hardware Store", "Pharmacy", "Bakery", "Butcher", "Deli", "Cafe", "Restaurant", "Diner", "Fast Food", "Bar", "Pub", "Club", "Hotel", "Motel", "Resort", "Hostel", "Campsite", "Airport", "Train Station", "Bus Stop", "Subway", "Port", "Dock", "Marina", "Pier", "Lighthouse", "Church", "Mosque", "Temple", "Synagogue", "Shrine", "Cemetery", "Court", "Prison", "Embassy", "City Hall", "Capitol", "Monument", "Memorial", "Plaza", "Square", "Market", "Bazaar", "Fair", "Carnival", "Festival", "Concert", "Opera", "Ballet", "Observatory", "Planetarium", "Laboratory", "Clinic", "Kitchen", "Bathroom", "Bedroom", "Living Room", "Basement", "Attic", "Balcony", "Backyard", "Porch", "Hallway", "Office", "Auditorium", "Classroom", "Cafeteria", "Locker Room", "Courthouse", "Studio", "Gallery", "Boutique", "Showroom", "Workshop", "Foundry", "Mill", "Refinery", "Quarry", "Mine", "Shipyard", "Harbor", "Canal", "Dam", "Reservoir", "Swamp", "Marsh", "Meadow", "Tundra", "Glacier", "Iceberg"
+            ]
+        };
+
+        // --- Custom Word Management Logic ---
+        let customWords = [];
+        
+        // Load words from local storage if they exist
+        if (localStorage.getItem('imposterCustomWords')) {
+            try {
+                customWords = JSON.parse(localStorage.getItem('imposterCustomWords'));
+            } catch(e) {
+                customWords = [];
+            }
+        }
+
+        const categorySelect = document.getElementById('category-select');
+        const customWordsSection = document.getElementById('custom-words-section');
+        const customWordInput = document.getElementById('custom-word-input');
+        const addWordBtn = document.getElementById('add-word-btn');
+        const wordTagsDisplay = document.getElementById('word-tags-display');
+
+        // Toggle custom words element view
+        categorySelect.addEventListener('change', () => {
+            if (categorySelect.value === 'Custom') {
+                customWordsSection.classList.remove('hidden');
+                renderCustomTags();
+            } else {
+                customWordsSection.classList.add('hidden');
+            }
+        });
+
+        function renderCustomTags() {
+            wordTagsDisplay.innerHTML = '';
+            if (customWords.length === 0) {
+                wordTagsDisplay.innerHTML = '<span style="color: var(--text-muted); font-size: 14px; font-style: italic;">No custom words added yet.</span>';
+                return;
+            }
+            customWords.forEach((word, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'word-tag';
+                tag.textContent = word + ' ';
+                
+                const deleteCross = document.createElement('span');
+                deleteCross.innerHTML = '&times;';
+                deleteCross.onclick = () => {
+                    deleteCustomWord(index);
+                };
+                
+                tag.appendChild(deleteCross);
+                wordTagsDisplay.appendChild(tag);
+            });
+        }
+
+        function handleAddCustomWord() {
+            const word = customWordInput.value.trim();
+            if (word && !customWords.includes(word)) {
+                customWords.push(word);
+                localStorage.setItem('imposterCustomWords', JSON.stringify(customWords));
+                customWordInput.value = '';
+                renderCustomTags();
+            }
+        }
+
+        addWordBtn.addEventListener('click', handleAddCustomWord);
+        customWordInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleAddCustomWord();
+            }
+        });
+
+        function deleteCustomWord(index) {
+            customWords.splice(index, 1);
+            localStorage.setItem('imposterCustomWords', JSON.stringify(customWords));
+            renderCustomTags();
+        }
+
+
+        // --- Game Setup & Playback Loops ---
+        let players = [];
+        let secretWord = "";
+        let imposterIndex = -1;
+        let currentPlayerRevealIndex = 0;
+
+        const playerList = document.getElementById('player-list');
+        const addPlayerBtn = document.getElementById('add-player-btn');
+        const startGameBtn = document.getElementById('start-game-btn');
+        const setupError = document.getElementById('setup-error');
+
+        const setupScreen = document.getElementById('setup-screen');
+        const passScreen = document.getElementById('pass-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const endScreen = document.getElementById('end-screen');
+
+        const passState = document.getElementById('pass-state');
+        const revealState = document.getElementById('reveal-state');
+        const currentPlayerName = document.getElementById('current-player-name');
+        const revealWordBtn = document.getElementById('reveal-word-btn');
+        const hideWordBtn = document.getElementById('hide-word-btn');
+        const secretWordDisplay = document.getElementById('secret-word-display');
+        const passHeader = document.getElementById('pass-header');
+
+        const startingPlayer = document.getElementById('starting-player');
+        const triggerRevealBtn = document.getElementById('trigger-reveal-btn');
+        const endImposterName = document.getElementById('end-imposter-name');
+        const endSecretWord = document.getElementById('end-secret-word');
+        const playAgainBtn = document.getElementById('play-again-btn');
+
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+
+        function updateAddButton() {
+            const currentInputs = playerList.querySelectorAll('.player-row').length;
+            addPlayerBtn.style.display = currentInputs >= 8 ? 'none' : 'block';
+        }
+
+        addPlayerBtn.addEventListener('click', () => {
+            const currentInputs = playerList.querySelectorAll('.player-row').length;
+            if (currentInputs < 8) {
+                const row = document.createElement('div');
+                row.className = 'player-row';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = `Player ${currentInputs + 1}`;
+                input.className = 'player-input';
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'btn-remove';
+                removeBtn.innerHTML = '×';
+                removeBtn.onclick = function() {
+                    row.remove();
+                    updateAddButton();
+                };
+
+                row.appendChild(input);
+                row.appendChild(removeBtn);
+                playerList.appendChild(row);
+                updateAddButton();
+            }
+        });
+
+        function switchScreen(hideElement, showElement) {
+            hideElement.classList.remove('active');
+            setTimeout(() => {
+                showElement.classList.add('active');
+            }, 10);
+        }
+
+        startGameBtn.addEventListener('click', () => {
+            const inputs = document.querySelectorAll('.player-input');
+            players = [];
+            let valid = true;
+
+            inputs.forEach(input => {
+                const val = input.value.trim();
+                if (val === '') valid = false;
+                else players.push(val);
+            });
+
+            if (!valid || players.length < 3) {
+                setupError.style.display = 'block';
+                setupError.textContent = players.length < 3 ? 'A minimum of 3 players is required.' : 'Please enter names for all players.';
+                return;
+            }
+
+            let selectedCat = categorySelect.value;
+            let words = [];
+
+            if (selectedCat === 'Custom') {
+                if (customWords.length < 2) {
+                    setupError.style.display = 'block';
+                    setupError.textContent = 'Please add at least 2 custom words to use your custom list.';
+                    return;
+                }
+                words = customWords;
+            } else {
+                const catKeys = Object.keys(wordBank);
+                if (selectedCat === 'Random') {
+                    selectedCat = catKeys[Math.floor(Math.random() * catKeys.length)];
+                }
+                words = wordBank[selectedCat];
+            }
+
+            setupError.style.display = 'none';
+            secretWord = words[Math.floor(Math.random() * words.length)];
+            imposterIndex = Math.floor(Math.random() * players.length);
+            
+            currentPlayerRevealIndex = 0;
+            updatePassScreen();
+            switchScreen(setupScreen, passScreen);
+        });
+
+        function updatePassScreen() {
+            passState.classList.remove('hidden');
+            revealState.classList.add('hidden');
+            currentPlayerName.textContent = players[currentPlayerRevealIndex];
+            passHeader.textContent = `Player ${currentPlayerRevealIndex + 1} of ${players.length}`;
+        }
+
+        revealWordBtn.addEventListener('click', () => {
+            passState.classList.add('hidden');
+            revealState.classList.remove('hidden');
+
+            if (currentPlayerRevealIndex === imposterIndex) {
+                secretWordDisplay.textContent = "You are the Imposter!";
+                secretWordDisplay.classList.add('imposter');
+            } else {
+                secretWordDisplay.textContent = secretWord;
+                secretWordDisplay.classList.remove('imposter');
+            }
+        });
+
+        hideWordBtn.addEventListener('click', () => {
+            currentPlayerRevealIndex++;
+            if (currentPlayerRevealIndex < players.length) {
+                updatePassScreen();
+            } else {
+                const randomStarter = players[Math.floor(Math.random() * players.length)];
+                startingPlayer.textContent = randomStarter;
+                switchScreen(passScreen, gameScreen);
+            }
+        });
+
+        triggerRevealBtn.addEventListener('click', () => {
+            confirmationModal.classList.add('active');
+        });
+
+        modalCancelBtn.addEventListener('click', () => {
+            confirmationModal.classList.remove('active');
+        });
+
+        modalConfirmBtn.addEventListener('click', () => {
+            confirmationModal.classList.remove('active');
+            endImposterName.textContent = players[imposterIndex];
+            endSecretWord.textContent = secretWord;
+            switchScreen(gameScreen, endScreen);
+        });
+
+        playAgainBtn.addEventListener('click', () => {
+            switchScreen(endScreen, setupScreen);
+            // Refresh custom tags view if custom selection was active
+            if (categorySelect.value === 'Custom') renderCustomTags();
+        });
+
+    </script>
+</body>
 </html>
