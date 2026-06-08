@@ -1,3 +1,6 @@
+Here is the updated code. Now, when the Imposter reveals their screen, they will see **"You are the Imposter! (Category: [Current Category])"** instead of just a blank notification. This gives them a starting point to blend in with their clues.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -312,7 +315,7 @@
             color: var(--danger);
             text-shadow: 0 0 20px rgba(244, 63, 94, 0.5);
             box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(244, 63, 94, 0.1);
-            font-size: 24px;
+            font-size: 22px;
         }
 
         /* Modal Styles */
@@ -566,7 +569,6 @@
         // --- Custom Word Management Logic ---
         let customWords = [];
         
-        // Load words from local storage if they exist
         if (localStorage.getItem('imposterCustomWords')) {
             try {
                 customWords = JSON.parse(localStorage.getItem('imposterCustomWords'));
@@ -581,7 +583,6 @@
         const addWordBtn = document.getElementById('add-word-btn');
         const wordTagsDisplay = document.getElementById('word-tags-display');
 
-        // Toggle custom words element view
         categorySelect.addEventListener('change', () => {
             if (categorySelect.value === 'Custom') {
                 customWordsSection.classList.remove('hidden');
@@ -640,6 +641,7 @@
 
         // --- Game Setup & Playback Loops ---
         let players = [];
+        let assignedCategoryName = "";
         let secretWord = "";
         let imposterIndex = -1;
         let currentPlayerRevealIndex = 0;
@@ -737,12 +739,14 @@
                     return;
                 }
                 words = customWords;
+                assignedCategoryName = "Custom List";
             } else {
                 const catKeys = Object.keys(wordBank);
                 if (selectedCat === 'Random') {
                     selectedCat = catKeys[Math.floor(Math.random() * catKeys.length)];
                 }
                 words = wordBank[selectedCat];
+                assignedCategoryName = selectedCat;
             }
 
             setupError.style.display = 'none';
@@ -766,7 +770,7 @@
             revealState.classList.remove('hidden');
 
             if (currentPlayerRevealIndex === imposterIndex) {
-                secretWordDisplay.textContent = "You are the Imposter!";
+                secretWordDisplay.innerHTML = `You are the Imposter!<br><span style="font-size: 14px; opacity: 0.75; display:block; margin-top: 8px;">Category: ${assignedCategoryName}</span>`;
                 secretWordDisplay.classList.add('imposter');
             } else {
                 secretWordDisplay.textContent = secretWord;
@@ -802,10 +806,11 @@
 
         playAgainBtn.addEventListener('click', () => {
             switchScreen(endScreen, setupScreen);
-            // Refresh custom tags view if custom selection was active
             if (categorySelect.value === 'Custom') renderCustomTags();
         });
 
     </script>
 </body>
 </html>
+
+```
