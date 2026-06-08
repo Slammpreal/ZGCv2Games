@@ -1,0 +1,694 @@
+<!--
+
+Checkers Html
+
+Copyright (C) 2025 - Fatih (https://github.com/99fk)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Checkers</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2Ij4KICA8Y2lyY2xlIGN4PSI4IiBjeT0iOCIgcj0iNyIgZmlsbD0iI0RDMDAwMCIvPgogIDxjaXJjbGUgY3g9IjEyIiBjeT0iNCIgcj0iMS42IiBmaWxsPSIjMDAwIi8+Cjwvc3ZnPg==">
+
+<style>
+  :root{
+    --bg:#0f1320; --panel:#171b2a; --accent:#6ee7ff; --muted:#9aa4b2; --ok:#8ee59b; --warn:#ffd36e;
+    --red:#e8515b; --square:#222637; --light:#c7d0e7; --shadow:0 10px 20px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:linear-gradient(180deg,#0c1020,#0a0d18);color:#e9eef8;font:16px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+  header{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 18px}
+  header h1{font-size:clamp(16px,3vw,20px);margin:0;color:#e9eef8;letter-spacing:.3px}
+  .wrap{display:grid;grid-template-columns: minmax(280px,1fr) minmax(340px,520px) minmax(280px,1fr);gap:18px;padding:0 18px 18px}
+  .panel{background:var(--panel);border:1px solid #20263c;border-radius:18px;box-shadow:var(--shadow);padding:14px}
+  .panel h2{margin:0 0 8px;font-size:16px;color:#e9eef8}
+  .panel p, .panel label, .panel li, .panel small{color:#c7d0e7}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .btn{appearance:none;border:1px solid #2a314d;background:#1b2136;color:#e9eef8;border-radius:12px;padding:8px 12px;cursor:pointer;transition:.15s transform ease,.15s background ease}
+  .btn:hover{background:#222a44}
+  .btn:active{transform:translateY(1px)}
+  .select, .input, textarea{background:#12182b;border:1px solid #2a314d;color:#e9eef8;border-radius:10px;padding:8px 10px}
+  .select{min-width:150px}
+  .toggle{cursor:pointer;display:flex;align-items:center;gap:6px}
+
+  /* Board */
+  .board-wrap{display:flex;justify-content:center}
+  .board{--size:min(78vw,520px);width:var(--size);height:var(--size);display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);border-radius:18px;overflow:hidden;border:1px solid #2a314d;box-shadow:var(--shadow)}
+  .sq{position:relative;display:grid;place-items:center;user-select:none}
+  .sq.light{background:#dfe7ff}
+  .sq.dark{background:var(--square)}
+  .sq.dark::after{content:"";position:absolute;inset:0;background:radial-gradient(80% 80% at 30% 30%,rgba(255,255,255,.04),transparent),radial-gradient(70% 70% at 80% 80%,rgba(0,0,0,.18),transparent)}
+
+  /* Pieces */
+  .piece{width:72%;aspect-ratio:1;border-radius:50%;box-shadow:0 6px 14px rgba(0,0,0,.45), inset 0 6px 10px rgba(255,255,255,.08);display:grid;place-items:center;font-weight:700;cursor:pointer}
+  .piece.red{background:radial-gradient(circle at 30% 30%, #ff7b86, var(--red));border:1px solid #ff99a2}
+  .piece.black{background:radial-gradient(circle at 30% 30%, #59607a, #2d3344);border:1px solid #9aa4b2}
+  .piece.king::after{content:"K";font-size:18px;letter-spacing:.5px;color:#fff;filter:drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+
+  /* Highlights */
+  .hl{position:absolute;inset:6px;border-radius:10px;outline:2px solid var(--accent);outline-offset:-4px;box-shadow:0 0 0 3px rgba(110,231,255,.25)}
+  .target{position:absolute;inset:auto auto 8px 8px;width:18px;height:18px;border-radius:50%;border:2px solid var(--ok);background:rgba(142,229,155,.18)}
+  .capture{border-color:var(--warn);background:rgba(255,211,110,.18)}
+
+  /* Right info */
+  .log{height:260px;overflow:auto;background:#0e1428;border:1px solid #253058;border-radius:12px;padding:8px}
+  .log p{margin:.25em 0}
+  .label{display:inline-block;min-width:92px;color:#9fb2ff}
+  .tag{display:inline-block;background:#243054;border:1px solid #35436b;color:#cfe1ff;border-radius:999px;padding:2px 8px;font-size:12px}
+  .muted{color:#9aa4b2}
+  .divider{height:1px;background:#263055;margin:8px 0}
+  .kbd{font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#11162a;border:1px solid #2a314d;color:#bcd0ff;border-radius:6px;padding:1px 6px;font-size:12px}
+
+  @media (max-width:1000px){ .wrap{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<header>
+  <h1>Checkers — <small>Single‑File • Local • vs AI</small></h1>
+  <div class="row">
+    <label class="muted">Language</label>
+    <select id="lang" class="select">
+      <option value="en" selected>English</option>
+      <option value="de">Deutsch</option>
+    </select>
+    <label class="toggle"><input type="checkbox" id="soundToggle" checked/> <span id="lblSound">Sound on</span></label>
+    <button id="btnRestart" class="btn">Restart</button>
+    <button id="btnUndo" class="btn">Undo</button>
+  </div>
+</header>
+<div class="wrap">
+  <!-- Left: Mode + AI -->
+  <section class="panel" id="left">
+    <h2 id="hMode">Mode</h2>
+    <div class="row" style="margin-bottom:8px">
+      <select id="mode" class="select">
+        <option value="local">Pass & Play (2 players)</option>
+        <option value="ai">Play vs AI</option>
+      </select>
+      <span class="tag" id="turnTag">Red to move</span>
+    </div>
+
+    <div id="aiBox" style="display:none">
+      <div class="row"><label class="label" id="lblYouPlay">You play</label>
+        <select id="aiHumanColor" class="select">
+          <option value="1">Red (first)</option>
+          <option value="-1">Black</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top:6px"><label class="label" id="lblAIDepth">AI depth</label>
+        <input id="aiDepth" class="input" type="number" value="4" min="1" max="7" step="1" style="width:80px"/>
+        <small class="muted" id="depthHint">(3–5 fast • 6–7 slower)</small>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <details>
+      <summary id="rulesTitle">Rules (this build)</summary>
+      <ul id="rulesList"></ul>
+      <small id="rulesNote"></small>
+    </details>
+  </section>
+
+  <!-- Middle: Board -->
+  <section class="panel board-wrap">
+    <div id="board" class="board" aria-label="Checkers board" role="grid"></div>
+  </section>
+
+  <!-- Right: Info / Moves -->
+  <section class="panel">
+    <h2 id="hInfo">Info</h2>
+    <div class="row"><span class="label" id="lblTurn">Turn</span><span id="turnText" class="tag">Red</span></div>
+    <div class="row" style="margin-top:6px"><span class="label" id="lblMode">Mode</span><span id="modeText" class="tag">Local</span></div>
+    <div class="row" style="margin-top:6px"><span class="label" id="lblResult">Result</span><span id="resultText" class="tag">—</span></div>
+    <div class="divider"></div>
+    <h2 id="hMoves">Moves</h2>
+    <div id="log" class="log" aria-live="polite"></div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn" id="btnExport">Export</button>
+      <button class="btn" id="btnImport">Import</button>
+    </div>
+    <input id="importFile" type="file" accept="application/json" style="display:none"/>
+    <div class="divider"></div>
+    <details>
+      <summary>Shortcuts</summary>
+      <p><span class="kbd">U</span> undo • <span class="kbd">R</span> restart • <span class="kbd">Esc</span> cancel selection</p>
+    </details>
+  </section>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  // --- Utilities ---
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const on = (el,ev,fn) => el.addEventListener(ev,fn);
+  const sleep = ms => new Promise(r=>setTimeout(r,ms));
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  // Local Storage helpers
+  function saveSettings(){
+    const s={ mode, aiHumanColor, aiDepth, lang:elLang.value, sound:elSound.checked };
+    try{ localStorage.setItem('checkersSettings', JSON.stringify(s)); }catch{}
+  }
+  function loadSettings(){
+    try{
+      const s=JSON.parse(localStorage.getItem('checkersSettings'));
+      if(!s) return;
+      if(s.mode) { mode=s.mode; elMode.value=mode; }
+      if(typeof s.aiHumanColor==='number') { aiHumanColor=s.aiHumanColor; $('#aiHumanColor').value=aiHumanColor; }
+      if(typeof s.aiDepth==='number') { aiDepth=s.aiDepth; $('#aiDepth').value=aiDepth; }
+      if(s.lang) { elLang.value=s.lang; applyI18N(s.lang); }
+      if(typeof s.sound==='boolean'){ elSound.checked=s.sound; soundOn = s.sound; updateSoundLabel(); }
+    }catch{}
+  }
+
+  const toast = (msg) => { const t=document.createElement('div'); t.textContent=msg; Object.assign(t.style,{position:'fixed',bottom:'14px',left:'50%',transform:'translateX(-50%)',background:'#12182b',border:'1px solid #2a314d',padding:'8px 12px',borderRadius:'12px',color:'#cfe1ff',zIndex:9999}); document.body.appendChild(t); setTimeout(()=>t.remove(),1300); };
+
+  // --- Web Audio (tiny SFX) ---
+  let actx=null; let soundOn=true;
+  function ac(){ if(!actx){ actx = new (window.AudioContext||window.webkitAudioContext)(); } return actx; }
+  function beep({time=0, freq=440, dur=0.08, type='sine', gain=0.06}){
+    if(!soundOn) return;
+    const a=ac(); const t=a.currentTime+time; const o=a.createOscillator(); const g=a.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,t);
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(gain, t+0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur);
+  }
+  const SFX={
+    move(){ beep({freq:520,dur:0.06,type:'triangle'}); },
+    capture(){ beep({freq:360,dur:0.09,type:'square',gain:0.08}); beep({time:0.06,freq:260,dur:0.06,type:'square',gain:0.06}); },
+    promote(){ beep({freq:740,dur:0.09}); beep({time:0.08,freq:880,dur:0.1}); },
+    restart(){ beep({freq:500,dur:0.06}); beep({time:0.07,freq:620,dur:0.07}); },
+    win(){ beep({freq:660,dur:0.12}); beep({time:0.12,freq:880,dur:0.14}); beep({time:0.28,freq:990,dur:0.18}); }
+  };
+  function updateSoundLabel(){
+    $('#lblSound').textContent = elSound.checked ? (elLang.value==='de'?'Ton an':'Sound on') : (elLang.value==='de'?'Ton aus':'Sound off');
+  }
+
+  // --- Game State ---
+  const EMPTY=0, R=1, RK=2, B=-1, BK=-2;
+  let board = new Array(8).fill(0).map(()=>new Array(8).fill(0));
+  let turn = 1;
+  let history = [];
+  let selected = null;
+  let legalForSelected = [];
+  let result = null;
+
+  let mode = 'local';
+
+  // AI settings
+  let aiHumanColor = 1;
+  let aiDepth = 4;
+
+  // DOM
+  const elBoard = $('#board');
+  const elLog = $('#log');
+  const elTurnText = $('#turnText');
+  const elMode = $('#mode');
+  const elModeText = $('#modeText');
+  const elResult = $('#resultText');
+  const elTurnTag = $('#turnTag');
+  const aiBox = $('#aiBox');
+  const elLang = $('#lang');
+  const elSound = $('#soundToggle');
+
+  // i18n
+  const L = {
+    en: {
+      mode:'Mode', info:'Info', moves:'Moves', youplay:'You play', depth:'AI depth', depthHint:'(3–5 fast • 6–7 slower)',
+      local:'Local', ai:'AI', red:'Red', black:'Black', redToMove:'Red to move', blackToMove:'Black to move', result:'Result',
+      export:'Export', import:'Import', rulesTitle:'Rules (this build)',
+      rules:[
+        'Standard 8×8 checkers (American/English draughts).',
+        'Red starts. Men move diagonally forward 1; kings move both ways 1.',
+        'Captures are mandatory. Multiple jumps allowed.',
+        'Men do not capture backwards here. Promotion ends the move.'
+      ],
+      rulesNote:'Prefer German “Dame”? Switch language; rules can be adapted.'
+    },
+    de: {
+      mode:'Modus', info:'Info', moves:'Züge', youplay:'Du spielst', depth:'KI‑Tiefe', depthHint:'(3–5 schnell • 6–7 langsamer)',
+      local:'Lokal', ai:'KI', red:'Rot', black:'Schwarz', redToMove:'Rot am Zug', blackToMove:'Schwarz am Zug', result:'Ergebnis',
+      export:'Export', import:'Import', rulesTitle:'Regeln (dieser Build)',
+      rules:[
+        'Standard 8×8 Checkers (American/English Draughts).',
+        'Rot startet. Steine ziehen diagonal vorwärts 1; Damen 1 in beide Richtungen.',
+        'Schlagen ist pflichtig. Mehrfachsprünge erlaubt.',
+        'Steine schlagen hier nicht rückwärts. Beförderung beendet den Zug.'
+      ],
+      rulesNote:'Lieber deutsche “Dame”? Sprache umschalten, Regeln lassen sich anpassen.'
+    }
+  };
+  function applyI18N(lang){
+    const t=L[lang];
+    $('#hMode').textContent=t.mode;
+    $('#hInfo').textContent=t.info;
+    $('#hMoves').textContent=t.moves;
+    $('#lblYouPlay').textContent=t.youplay;
+    $('#lblAIDepth').textContent=t.depth;
+    $('#depthHint').textContent=t.depthHint;
+    $('#lblTurn').textContent = (lang==='de'?'Am Zug':'Turn');
+    $('#lblMode').textContent = t.mode;
+    $('#lblResult').textContent = t.result;
+    $('#modeText').textContent = (mode==='local'? t.local : t.ai);
+    $('#rulesTitle').textContent=t.rulesTitle;
+    const rl=$('#rulesList'); rl.innerHTML=''; t.rules.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; rl.appendChild(li); });
+    $('#rulesNote').textContent=t.rulesNote;
+    $('#btnExport').textContent=t.export; $('#btnImport').textContent=t.import;
+    elTurnTag.textContent = (turn===1? t.redToMove : t.blackToMove);
+    elTurnText.textContent = (turn===1? t.red : t.black);
+    // update selects
+    $('#mode').options[0].text = (lang==='de' ? 'Pass & Play (2 Spieler)' : 'Pass & Play (2 players)');
+    $('#mode').options[1].text = (lang==='de' ? 'Gegen KI' : 'Play vs AI');
+    $('#aiHumanColor').options[0].text = (lang==='de' ? 'Rot (beginnt)' : 'Red (first)');
+    $('#aiHumanColor').options[1].text = (lang==='de' ? 'Schwarz' : 'Black');
+    updateSoundLabel();
+  }
+
+  // Init
+  buildBoardUI();
+  resetGame();
+  hookUI();
+  loadSettings(); // load after UI exists; may call i18n
+  applyI18N(elLang.value||'en');
+  updateInfo();
+
+  // --- Board UI ---
+  function buildBoardUI(){
+    elBoard.innerHTML = '';
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const sq=document.createElement('div');
+        sq.className='sq ' + (((r+c)%2)?'dark':'light');
+        sq.dataset.r=r; sq.dataset.c=c; sq.role='gridcell';
+        elBoard.appendChild(sq);
+        if((r+c)%2===1){ on(sq,'click', ()=> onSquareClick(r,c)); }
+      }
+    }
+    render();
+  }
+
+  function render(){
+    $$('.sq').forEach(s=>{ s.innerHTML=''; });
+    for(let r=0;r<8;r++){
+      for(let c=0;c<8;c++){
+        const v = board[r][c];
+        const sq = elBoard.children[r*8+c];
+        if((r+c)%2===1 && v!==EMPTY){
+          const d=document.createElement('div');
+          d.className='piece ' + (v>0? 'red':'black') + (Math.abs(v)===2?' king':'');
+          d.title = (v>0? 'Red':'Black') + (Math.abs(v)===2?' (King)':'');
+          if((mode==='local') || (mode==='ai' && turn === aiHumanColor)){
+            if((turn===1 && v>0) || (turn===-1 && v<0)){
+              d.style.cursor='pointer';
+              on(d,'click',(e)=>{ e.stopPropagation(); onSquareClick(r,c); });
+            }
+          }
+          sq.appendChild(d);
+        }
+      }
+    }
+
+    // selection highlights
+    if(selected){
+      const sq = elBoard.children[selected.r*8+selected.c];
+      const hl=document.createElement('div'); hl.className='hl'; sq.appendChild(hl);
+      for(const m of legalForSelected){
+        const last = m.path[m.path.length-1];
+        const s = elBoard.children[last.r*8+last.c];
+        const dot=document.createElement('div'); dot.className='target' + (m.captures>0? ' capture':''); s.appendChild(dot);
+      }
+    }
+
+    const lang = elLang.value;
+    elTurnText.textContent = (turn===1? (lang==='de'?'Rot':'Red') : (lang==='de'?'Schwarz':'Black'));
+    elTurnTag.textContent = (turn===1? (lang==='de'?'Rot am Zug':'Red to move') : (lang==='de'?'Schwarz am Zug':'Black to move'));
+  }
+
+  function onSquareClick(r,c){
+    if(result) return;
+    if(mode==='ai' && turn!==aiHumanColor) return;
+    const v = board[r][c];
+
+    if(selected){
+      const mv = legalForSelected.find(m => m.path.at(-1).r===r && m.path.at(-1).c===c);
+      if(mv){ doMove(mv); }
+      else{
+        if((turn===1 && v>0) || (turn===-1 && v<0)) selectSquare(r,c); else cancelSelection();
+      }
+    }else{
+      if((turn===1 && v>0) || (turn===-1 && v<0)) selectSquare(r,c);
+    }
+  }
+
+  function selectSquare(r,c){
+    selected={r,c};
+    legalForSelected = legalMovesFor(r,c);
+    const caps = allCaptures();
+    if(caps.length>0){
+      const destSet = new Set(legalForSelected.filter(m=>m.captures>0).map(m=>m.path.at(-1).r+','+m.path.at(-1).c));
+      legalForSelected = legalForSelected.filter(m=> destSet.has(m.path.at(-1).r+','+m.path.at(-1).c) && m.captures>0);
+    }
+    render();
+  }
+
+  function cancelSelection(){ selected=null; legalForSelected=[]; render(); }
+
+  // --- Rules & moves (American/English draughts) ---
+  function inBounds(r,c){ return r>=0 && r<8 && c>=0 && c<8; }
+  function cloneBoard(b){ return b.map(row=>row.slice()); }
+
+  function dirsFor(v){
+    const s = Math.sign(v);
+    const isKing = Math.abs(v)===2;
+    if(isKing) return [[-1,-1],[-1,1],[1,-1],[1,1]];
+    return (s===1) ? [[-1,-1],[-1,1]] : [[1,-1],[1,1]]; // men forward only
+  }
+
+  function legalMovesFor(r,c){
+    const v = board[r][c]; if(v===EMPTY) return [];
+    const me = Math.sign(v); if(me!==turn) return [];
+    const moves=[];
+
+    const capSeqs = captureSeqsFrom(r,c,board);
+    for(const seq of capSeqs){ moves.push(seq); }
+
+    if(capSeqs.length>0) return moves; // mandatory capture
+
+    for(const [dr,dc] of dirsFor(v)){
+      const r1=r+dr, c1=c+dc;
+      if(inBounds(r1,c1) && board[r1][c1]===EMPTY){
+        moves.push({ path:[{r,c},{r:r1,c:c1}], captures:0, promote: willPromote(v, r1) });
+      }
+    }
+    return moves;
+  }
+
+  function willPromote(v, r){ return (v===R && r===0) || (v===B && r===7); }
+
+  function captureSeqsFrom(r,c,b){
+    const v = b[r][c]; const me=Math.sign(v); const isKing=Math.abs(v)===2;
+    const res=[];
+
+    function dfs(curR,curC, curB, path, captured){
+      let found=false;
+      const dirs = isKing? [[-1,-1],[-1,1],[1,-1],[1,1]] : dirsFor(v); // men capture forward only in this build
+      for(const [dr,dc] of dirs){
+        const r1=curR+dr, c1=curC+dc; const r2=curR+2*dr, c2=curC+2*dc;
+        if(inBounds(r2,c2) && curB[r1][c1]*me<0 && curB[r2][c2]===EMPTY){
+          const nb = cloneBoard(curB);
+          nb[r1][c1]=EMPTY; nb[curR][curC]=EMPTY; nb[r2][c2]=v;
+          const promo = willPromote(v, r2);
+          if(promo){ res.push({ path:[...path,{r:r2,c:c2}], captures:captured+1, promote:true }); found=true; }
+          else{ dfs(r2,c2, nb, [...path,{r:r2,c:c2}], captured+1); found=true; }
+        }
+      }
+      if(!found && captured>0){ res.push({ path, captures:captured, promote:false }); }
+    }
+
+    dfs(r,c,b,[{r,c}],0);
+    return res.filter(m=>m.captures>0);
+  }
+
+  function allMoves(){
+    const moves=[]; let anyCapture=false;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c]*turn>0){
+      const ms = legalMovesFor(r,c);
+      if(ms.some(m=>m.captures>0)) anyCapture=true;
+      for(const m of ms) moves.push({from:{r,c}, ...m});
+    }
+    return anyCapture? moves.filter(m=>m.captures>0) : moves;
+  }
+
+  function allCaptures(){
+    const caps=[];
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(board[r][c]*turn>0){
+      const ms = captureSeqsFrom(r,c,board);
+      for(const m of ms) caps.push({from:{r,c},...m});
+    }
+    return caps;
+  }
+
+  function doMove(move){
+    saveHistory();
+    const path = move.path; const start = path[0]; const end = path[path.length-1];
+    const v0 = board[start.r][start.c];
+
+    board[start.r][start.c]=EMPTY;
+    let didCapture=false;
+    for(let i=1;i<path.length;i++){
+      const a = path[i-1], z = path[i]; const dr=(z.r-a.r), dc=(z.c-a.c);
+      if(Math.abs(dr)===2 && Math.abs(dc)===2){ const mr=a.r+dr/2, mc=a.c+dc/2; board[mr][mc]=EMPTY; didCapture=true; }
+    }
+
+    let v=v0; board[end.r][end.c]=v;
+    if((v===R && end.r===0) || (v===B && end.r===7)){ board[end.r][end.c] = (v>0)?RK:BK; SFX.promote(); }
+
+    if(didCapture) SFX.capture(); else SFX.move();
+
+    logMove(turn, start, end, move.captures);
+
+    turn = -turn; selected=null; legalForSelected=[];
+
+    const ended = checkGameEnd();
+    render();
+
+    saveSettings();
+    if(!ended && mode==='ai') maybeAI();
+  }
+
+  function logMove(side, start, end, captures){
+    const p=document.createElement('p');
+    p.innerHTML =
+  '<span class="muted">' + (side === 1 ? 'Red' : 'Black') + '</span> ' +
+  coord(start) + ' &rarr; ' + coord(end) +
+  (captures ? ' &times;' + captures : '');
+    elLog.appendChild(p); elLog.scrollTop = elLog.scrollHeight;
+  }
+
+  function coord({r,c}){ return String.fromCharCode(97+c) + (8-r); }
+
+  function checkGameEnd(){
+    const ms = allMoves();
+    if(ms.length===0){ const txt = (turn===1? 'Black wins':'Red wins'); elResult.textContent=txt; SFX.win(); return true; }
+    elResult.textContent='—'; return false;
+  }
+
+  // --- Setup / Reset / Undo ---
+  function startingBoard(){
+    const b = new Array(8).fill(0).map(()=>new Array(8).fill(0));
+    for(let r=0;r<3;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]=B; // black top
+    for(let r=5;r<8;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]=R; // red bottom
+    return b;
+  }
+
+  function resetGame(){
+    board = startingBoard(); turn=1; history=[]; result=null; selected=null; legalForSelected=[]; elLog.innerHTML='';
+    render(); SFX.restart();
+    if(mode==='ai' && turn!==aiHumanColor) maybeAI();
+    saveSettings();
+  }
+
+  function saveHistory(){ history.push({board:cloneBoard(board), turn}); if(history.length>200) history.shift(); }
+  function undo(){ if(history.length){ const h=history.pop(); board=h.board; turn=h.turn; result=null; render(); saveSettings(); } }
+
+  // --- AI (Minimax + Alpha‑Beta) ---
+  async function maybeAI(){
+    if(result) return; if(mode!=='ai') return; if(turn===aiHumanColor) return;
+    await sleep(180);
+    const best = aiSearch(board, turn, aiDepth, -Infinity, Infinity);
+    if(best && best.move){ doMove(best.move); }
+  }
+
+  function aiSearch(bd, side, depth, alpha, beta){
+    if(depth===0){ return { score: evalBoard(bd, side) }; }
+    const moves = genAllMoves(bd, side);
+    if(moves.length===0){ return { score: -9999 }; }
+    let bestMove=null;
+    for(const mv of moves){
+      const nb = applyMoveClone(bd, mv);
+      const res = aiSearch(nb, -side, depth-1, -beta, -alpha);
+      const score = -res.score;
+      if(score>alpha){ alpha=score; bestMove=mv; }
+      if(alpha>=beta) break; // prune
+    }
+    return { score: alpha, move: bestMove };
+  }
+
+  function genAllMoves(bd, side){
+    const moves=[]; let anyCap=false;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++) if(Math.sign(bd[r][c])===side){
+      const ms = legalMovesForAt(bd,r,c,side);
+      if(ms.some(m=>m.captures>0)) anyCap=true;
+      for(const m of ms) moves.push({from:{r,c},...m});
+    }
+    return anyCap? moves.filter(m=>m.captures>0) : moves;
+  }
+
+  function legalMovesForAt(bd,r,c,side){
+    const v = bd[r][c]; if(v===EMPTY || Math.sign(v)!==side) return [];
+    const moves=[]; const capSeqs = captureSeqsFromAt(bd,r,c);
+    for(const s of capSeqs) moves.push(s);
+    if(capSeqs.length>0) return moves;
+    for(const [dr,dc] of dirsFor(v)){
+      const r1=r+dr, c1=c+dc; if(inBounds(r1,c1) && bd[r1][c1]===EMPTY){
+        moves.push({ path:[{r,c},{r:r1,c:c1}], captures:0, promote: willPromote(v, r1) });
+      }
+    }
+    return moves;
+  }
+
+  function captureSeqsFromAt(bd,r,c){
+    const v = bd[r][c]; const me = Math.sign(v); const isKing=Math.abs(v)===2; const res=[];
+    function dfs(cr,cc, cb, path, captured){
+      let found=false; const dirs = isKing? [[-1,-1],[-1,1],[1,-1],[1,1]] : dirsFor(v);
+      for(const [dr,dc] of dirs){
+        const r1=cr+dr, c1=cc+dc, r2=cr+2*dr, c2=cc+2*dc;
+        if(inBounds(r2,c2) && cb[r1][c1]*me<0 && cb[r2][c2]===EMPTY){
+          const nb = cloneBoard(cb); nb[r1][c1]=EMPTY; nb[cr][cc]=EMPTY; nb[r2][c2]=v;
+          if(willPromote(v,r2)){ res.push({ path:[...path,{r:r2,c:c2}], captures:captured+1, promote:true }); found=true; }
+          else{ dfs(r2,c2, nb, [...path,{r:r2,c:c2}], captured+1); found=true; }
+        }
+      }
+      if(!found && captured>0) res.push({ path, captures:captured, promote:false });
+    }
+    dfs(r,c,bd,[{r,c}],0); return res.filter(m=>m.captures>0);
+  }
+
+  function applyMoveClone(bd, move){
+    const nb = cloneBoard(bd); const path=move.path; const start=path[0]; const end=path.at(-1); const v0=nb[start.r][start.c]; nb[start.r][start.c]=EMPTY;
+    for(let i=1;i<path.length;i++){ const a=path[i-1], z=path[i]; const dr=z.r-a.r, dc=z.c-a.c; if(Math.abs(dr)===2){ nb[a.r+dr/2][a.c+dc/2]=EMPTY; } }
+    nb[end.r][end.c]=v0; if(willPromote(v0,end.r)) nb[end.r][end.c]=(v0>0?RK:BK); return nb;
+  }
+
+  function evalBoard(bd, side){
+    // simple heuristic: material + mobility + advancement
+    let score=0;
+    for(let r=0;r<8;r++) for(let c=0;c<8;c++){
+      const v=bd[r][c]; if(v===EMPTY) continue;
+      const s=Math.sign(v); const king=Math.abs(v)===2; const val = king? 1.7 : 1.0;
+      const adv = s===1? (r-3.5)*-0.05 : (r-3.5)*0.05;
+      score += (s===side?1:-1) * (val + adv);
+    }
+    score += 0.04 * (genAllMoves(bd, side).length - genAllMoves(bd, -side).length);
+    return score;
+  }
+
+  // --- UI ---
+  function hookUI(){
+    on($('#btnRestart'),'click', resetGame);
+    on($('#btnUndo'),'click', undo);
+
+    on(document,'keydown', (e)=>{
+      if(e.key==='u' || e.key==='U') undo();
+      if(e.key==='r' || e.key==='R') resetGame();
+      if(e.key==='Escape') cancelSelection();
+      if(actx && actx.state==='suspended') actx.resume();
+    });
+
+    on(elMode,'change', ()=>{
+      mode = elMode.value; elModeText.textContent = mode==='local'? (elLang.value==='de'?'Lokal':'Local') : (elLang.value==='de'?'KI':'AI');
+      if(mode==='local'){ aiBox.style.display='none'; }
+      if(mode==='ai'){ aiBox.style.display=''; if(turn!==aiHumanColor) maybeAI(); }
+      cancelSelection(); updateInfo(); saveSettings();
+    });
+
+    on($('#aiHumanColor'),'change', (e)=>{ aiHumanColor = parseInt(e.target.value,10); saveSettings(); resetGame(); });
+    on($('#aiDepth'),'change', (e)=>{ aiDepth = clamp(parseInt(e.target.value,10)||4,1,7); saveSettings(); });
+
+    // Language toggle
+    on(elLang,'change', ()=>{ applyI18N(elLang.value); render(); saveSettings(); });
+
+    // Sound toggle
+    on(elSound,'change', ()=>{ soundOn = elSound.checked; if(soundOn) { try{ ac().resume(); }catch{} } updateSoundLabel(); saveSettings(); });
+
+    // Export/Import
+    on($('#btnExport'),'click', ()=>{
+      const data = { board, turn, history, mode:'local', ts: Date.now() };
+      const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
+      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='checkers-game.json'; a.click(); URL.revokeObjectURL(a.href);
+    });
+    on($('#btnImport'),'click', ()=> $('#importFile').click());
+    on($('#importFile'),'change', async (e)=>{
+      const f=e.target.files[0]; if(!f) return; const txt=await f.text();
+      try{ const data=JSON.parse(txt); if(data.board){ board=data.board; turn=data.turn||1; history=data.history||[]; mode='local'; elMode.value='local'; elModeText.textContent=(elLang.value==='de'?'Lokal':'Local'); result=null; render(); updateInfo(); saveSettings(); } }
+      catch{ toast('Bad file'); }
+    });
+
+    // unlock audio on first click
+    on(document,'pointerdown', ()=>{ try{ if(ac().state==='suspended') ac().resume(); }catch{} }, { once:true });
+  }
+
+  function updateInfo(){
+    const lang = elLang.value;
+    elTurnText.textContent = (turn===1? (lang==='de'?'Rot':'Red') : (lang==='de'?'Schwarz':'Black'));
+    elModeText.textContent = (mode==='local'? (lang==='de'?'Lokal':'Local') : (lang==='de'?'KI':'AI'));
+    elResult.textContent = result? result : '—';
+  }
+
+  // Build starting state
+  function startingSetup(){
+    return startingBoard();
+  }
+
+  // --- Setup initial board and rules text ---
+  function populateRules(lang){
+    const t=L[lang];
+    const rl=$('#rulesList'); rl.innerHTML='';
+    t.rules.forEach(s=>{ const li=document.createElement('li'); li.textContent=s; rl.appendChild(li); });
+    $('#rulesNote').textContent=t.rulesNote;
+  }
+
+  function initRules(){ populateRules(elLang.value||'en'); }
+  initRules();
+
+  // Finish init
+  function initGame(){
+    board = startingSetup();
+    render();
+    applyI18N(elLang.value||'en');
+    updateInfo();
+  }
+  initGame();
+
+  // ensure settings load affects UI
+  loadSettings();
+  applyI18N(elLang.value||'en');
+  updateSoundLabel();
+  updateInfo();
+
+  // Ensure reset sets board from scratch
+  function startingBoard(){
+    const b = new Array(8).fill(0).map(()=>new Array(8).fill(0));
+    for(let r=0;r<3;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]=B;
+    for(let r=5;r<8;r++) for(let c=0;c<8;c++) if((r+c)%2===1) b[r][c]=R;
+    return b;
+  }
+
+})();
+document.addEventListener("contextmenu", e => e.preventDefault());
+</script>
+</body>
+</html>

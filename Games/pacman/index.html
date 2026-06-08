@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Pac-Man</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    :root {
+      --game-width: min(92vw, 420px);
+      --control-size: clamp(56px, 14vw, 72px);
+    }
+    body {
+      background: #000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      height: 100dvh;
+      padding:
+        max(10px, env(safe-area-inset-top))
+        12px
+        max(12px, env(safe-area-inset-bottom))
+        12px;
+      font-family: 'Courier New', monospace;
+      color: #fff;
+      user-select: none;
+      -webkit-user-select: none;
+      overscroll-behavior: none;
+      overflow: hidden;
+    }
+    .game-shell {
+      width: var(--game-width);
+      max-width: 420px;
+      max-height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 4px 0 0;
+      font-size: clamp(12px, 3vw, 15px);
+    }
+    .score { color: #fff; }
+    .high-score { color: #aaa; }
+    .level-display { color: #ffff00; }
+    .sub-header {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      padding: 0 0 2px 0;
+      font-size: clamp(11px, 2.8vw, 13px);
+    }
+    .lives { color: #ffff00; letter-spacing: 3px; }
+    .fruit-display { font-size: clamp(12px, 3vw, 14px); }
+    .game-frame {
+      position: relative;
+      display: inline-block;
+      width: 100%;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 2px solid #2121de;
+      image-rendering: pixelated;
+      touch-action: none;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-size: 28px;
+      color: #ffff00;
+      text-align: center;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.55);
+    }
+    .overlay .sub { font-size: 14px; color: #aaa; }
+    .overlay .hi { font-size: 16px; color: #fff; }
+    .controls {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      justify-items: center;
+      align-items: center;
+    }
+    .control-btn {
+      width: min(100%, var(--control-size));
+      aspect-ratio: 1;
+      border: 2px solid #2121de;
+      background: #111;
+      color: #ffff00;
+      font: inherit;
+      font-size: clamp(24px, 6vw, 30px);
+      line-height: 1;
+      border-radius: 12px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .control-btn:active {
+      background: #2121de;
+      color: #fff;
+    }
+    .control-spacer {
+      width: min(100%, var(--control-size));
+      aspect-ratio: 1;
+    }
+    .mobile-hint {
+      color: #aaa;
+      font-size: 11px;
+      text-align: center;
+    }
+    .leaderboard-panel {
+      width: 100%;
+      border: 2px solid #2121de;
+      background: #080808;
+      padding: 10px 12px;
+      color: #fff;
+    }
+    .leaderboard-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+      color: #ffff00;
+      font-size: 13px;
+    }
+    .leaderboard-status {
+      color: #aaa;
+      font-size: 11px;
+    }
+    .leaderboard-list {
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .leaderboard-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .leaderboard-rank {
+      color: #aaa;
+    }
+    .leaderboard-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .leaderboard-score {
+      color: #ffff00;
+    }
+    .leaderboard-level {
+      color: #aaa;
+    }
+    .leaderboard-empty {
+      color: #aaa;
+      font-size: 12px;
+    }
+    .overlay-form {
+      display: grid;
+      gap: 10px;
+      width: min(100%, 240px);
+    }
+    .overlay-input {
+      width: 100%;
+      border: 2px solid #2121de;
+      background: #111;
+      color: #fff;
+      font: inherit;
+      padding: 10px 12px;
+      text-transform: uppercase;
+    }
+    .overlay-button {
+      border: 2px solid #2121de;
+      background: #111;
+      color: #ffff00;
+      font: inherit;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+    .overlay-button:disabled {
+      opacity: 0.6;
+      cursor: default;
+    }
+    .overlay-status {
+      min-height: 16px;
+      font-size: 12px;
+      color: #aaa;
+    }
+    @media (max-width: 480px) {
+      :root {
+        --game-width: min(94vw, 420px);
+        --control-size: clamp(52px, 16vw, 68px);
+      }
+      body {
+        justify-content: center;
+      }
+    }
+    @media (max-height: 760px) {
+      .mobile-hint {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="game-shell" id="game-shell">
+    <div class="header" id="header">
+      <div class="score">SCORE: <span id="score">0</span></div>
+      <div class="high-score">HI: <span id="highscore">0</span></div>
+      <div class="level-display">LVL <span id="level">1</span></div>
+    </div>
+    <div class="sub-header" id="sub-header">
+      <div class="lives" id="lives"></div>
+      <div class="fruit-display" id="fruits"></div>
+    </div>
+    <div class="game-frame">
+      <canvas id="game"></canvas>
+      <div class="overlay" id="overlay">
+        <div>PAC-MAN</div>
+        <div class="sub">Tap, swipe, or use the controls to start</div>
+      </div>
+    </div>
+    <div class="controls" id="controls" aria-label="Game controls">
+      <div class="control-spacer" aria-hidden="true"></div>
+      <button class="control-btn" data-dir="up" aria-label="Move up">&#9650;</button>
+      <div class="control-spacer" aria-hidden="true"></div>
+      <button class="control-btn" data-dir="left" aria-label="Move left">&#9664;</button>
+      <div class="control-spacer" aria-hidden="true"></div>
+      <button class="control-btn" data-dir="right" aria-label="Move right">&#9654;</button>
+      <div class="control-spacer" aria-hidden="true"></div>
+      <button class="control-btn" data-dir="down" aria-label="Move down">&#9660;</button>
+      <div class="control-spacer" aria-hidden="true"></div>
+    </div>
+    <div class="mobile-hint" id="mobile-hint">Swipe on the board or use the D-pad</div>
+    <section class="leaderboard-panel" aria-labelledby="leaderboard-title">
+      <div class="leaderboard-title">
+        <span id="leaderboard-title">GLOBAL TOP 10</span>
+        <span class="leaderboard-status" id="leaderboard-status">Loading...</span>
+      </div>
+      <ol class="leaderboard-list" id="leaderboard-list"></ol>
+    </section>
+  </main>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const highScoreEl = document.getElementById('highscore');
+const livesEl = document.getElementById('lives');
+const levelEl = document.getElementById('level');
+const fruitsEl = document.getElementById('fruits');
+const overlay = document.getElementById('overlay');
+const controlButtons = document.querySelectorAll('.control-btn');
+const gameShell = document.getElementById('game-shell');
+const header = document.getElementById('header');
+const subHeader = document.getElementById('sub-header');
+const controls = document.getElementById('controls');
+const mobileHint = document.getElementById('mobile-hint');
+const leaderboardList = document.getElementById('leaderboard-list');
+const leaderboardStatusEl = document.getElementById('leaderboard-status');
+
+const TILE = 20;
+const LEADERBOARD_LIMIT = 10;
+
+// W=wall, .=dot, o=power pellet, -=empty, G=ghost house wall, D=ghost door
+const MAP_STR = [
+  "WWWWWWWWWWWWWWWWWWWWW",
+  "W.........W.........W",
+  "W.WWW.WWW.W.WWW.WWW.W",
+  "WoW W.W W.W.W W.W WoW",
+  "W.WWW.WWW.W.WWW.WWW.W",
+  "W...................W",
+  "W.WWW.W.WWWWW.W.WWW.W",
+  "W.WWW.W.WWWWW.W.WWW.W",
+  "W.....W...W...W.....W",
+  "WWWWW.WWW-W-WWW.WWWWW",
+  "----W.W-------W.W----",
+  "----W.W-GGDGG-W.W----",
+  "WWWWW.W-G---G-W.WWWWW",
+  "------.-G---G-.------",
+  "WWWWW.W-G---G-W.WWWWW",
+  "----W.W-GGGGG-W.W----",
+  "----W.W-------W.W----",
+  "WWWWW.W-WWWWW-W.WWWWW",
+  "W.........W.........W",
+  "W.WWW.WWW.W.WWW.WWW.W",
+  "Wo..W...........W..oW",
+  "WWW.W.W.WWWWW.W.W.WWW",
+  "W.....W...W...W.....W",
+  "W.WWWWWWW.W.WWWWWWW.W",
+  "W...................W",
+  "WWWWWWWWWWWWWWWWWWWWW",
+];
+
+const ROWS = MAP_STR.length;
+const COLS = MAP_STR[0].length;
+
+canvas.width = COLS * TILE;
+canvas.height = ROWS * TILE;
+
+function updateLayout() {
+  const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const viewportWidth = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+  const styles = getComputedStyle(document.body);
+  const verticalPadding = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom);
+  const shellGap = parseFloat(getComputedStyle(gameShell).gap) || 0;
+  const fixedHeight =
+    header.offsetHeight +
+    subHeader.offsetHeight +
+    controls.offsetHeight +
+    (mobileHint.offsetParent ? mobileHint.offsetHeight : 0) +
+    shellGap * 4;
+  const availableHeight = Math.max(220, viewportHeight - verticalPadding - fixedHeight);
+  const availableWidth = Math.max(220, viewportWidth - 24);
+  const boardWidthFromHeight = availableHeight * (canvas.width / canvas.height);
+  const nextWidth = Math.min(420, availableWidth, boardWidthFromHeight);
+  document.documentElement.style.setProperty('--game-width', `${nextWidth}px`);
+}
+
+// Cell types: 0=wall, 1=dot, 2=empty, 3=power pellet, 4=ghost wall, 5=ghost door
+function parseCell(ch) {
+  if (ch === 'W') return 0;
+  if (ch === '.') return 1;
+  if (ch === 'o') return 3;
+  if (ch === '-') return 2;
+  if (ch === 'G') return 4;
+  if (ch === 'D') return 5;
+  return 2;
+}
+
+// ---- Fruit config per level ----
+const FRUIT_TYPES = [
+  { name: 'Cherry',     emoji: '\u{1F352}', points: 100 },
+  { name: 'Strawberry', emoji: '\u{1F353}', points: 300 },
+  { name: 'Orange',     emoji: '\u{1F34A}', points: 500 },
+  { name: 'Apple',      emoji: '\u{1F34E}', points: 700 },
+  { name: 'Grape',      emoji: '\u{1F347}', points: 1000 },
+  { name: 'Peach',      emoji: '\u{1F351}', points: 2000 },
+  { name: 'Bell',       emoji: '\u{1F514}', points: 3000 },
+  { name: 'Key',        emoji: '\u{1F511}', points: 5000 },
+];
+
+// ---- Level speed scaling ----
+// Each level: pac speed (ticks per move), ghost speed, frightened ghost speed, fright duration
+function levelConfig(lvl) {
+  const l = Math.min(lvl, 21);
+  return {
+    pacSpeed:       Math.max(4, 6 - Math.floor(l / 4)),     // 6 -> 5 -> 4
+    ghostSpeed:     Math.max(5, 7 - Math.floor(l / 3)),     // 7 -> 6 -> 5
+    frightSpeed:    Math.max(7, 11 - Math.floor(l / 3)),    // 11 -> 9 -> 7
+    frightDuration: Math.max(180, 300 - (l - 1) * 15),      // +2s at level 1, still shortens later
+  };
+}
+
+// ---- Scatter/chase mode timing (in ticks at 60fps) ----
+// Ghosts alternate: scatter for S ticks, chase for C ticks
+const MODE_SCHEDULE = [
+  { scatter: 420, chase: 1200 },  // 7s scatter, 20s chase
+  { scatter: 420, chase: 1200 },
+  { scatter: 300, chase: 1200 },
+  { scatter: 1, chase: Infinity }, // permanent chase after phase 4
+];
+
+// ---- Ghost scatter targets (corners) ----
+const SCATTER_TARGETS = [
+  { x: 19, y: 0 },   // Blinky: top-right
+  { x: 1, y: 0 },    // Pinky: top-left
+  { x: 19, y: 25 },  // Inky: bottom-right
+  { x: 1, y: 25 },   // Clyde: bottom-left
+];
+
+let grid = [];
+let score = 0;
+let lives = 3;
+let level = 1;
+let totalDots = 0;
+let dotsEaten = 0;
+let gameState = 'waiting';
+let ghostFrightened = 0;
+let collectedFruits = [];
+let highScore = 0;
+let leaderboardScores = [];
+let leaderboardStatus = 'Loading...';
+let pendingLeaderboardEntry = null;
+let leaderboardSubmitting = false;
+
+// Fruit state
+let fruit = null; // { x, y, type, spawnTick, points }
+let fruitSpawned1 = false;
+let fruitSpawned2 = false;
+const FRUIT_POS = { x: 10, y: 13 };
+const FRUIT_DURATION = 600; // ticks visible
+
+// Scatter/chase mode tracking
+let modePhase = 0;
+let modeTick = 0;
+let currentMode = 'scatter'; // 'scatter' or 'chase'
+
+function loadHighScore() {
+  try {
+    const storedValue = window.localStorage.getItem('pacman_highscore');
+    const parsed = Number.parseInt(storedValue || '0', 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveHighScore(value) {
+  try {
+    window.localStorage.setItem('pacman_highscore', value.toString());
+  } catch {
+    // Ignore storage failures so the game still runs in restricted contexts.
+  }
+}
+
+highScore = loadHighScore();
+highScoreEl.textContent = highScore;
+
+function showOverlay(title, subtitle, detail) {
+  let html = `<div>${title}</div>`;
+  if (detail) html += `<div class="hi">${detail}</div>`;
+  if (subtitle) html += `<div class="sub">${subtitle}</div>`;
+  overlay.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+
+function hideOverlay() {
+  overlay.style.display = 'none';
+}
+
+async function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    await document.exitFullscreen();
+    return false;
+  }
+  await gameShell.requestFullscreen();
+  return true;
+}
+
+function pauseGame() {
+  if (gameState !== 'playing') return;
+  gameState = 'paused';
+  showOverlay('PAUSED', 'Press P to resume', 'F toggles fullscreen');
+}
+
+function resumeGame() {
+  if (gameState !== 'paused') return;
+  gameState = 'playing';
+  hideOverlay();
+}
+
+function togglePause() {
+  if (gameState === 'playing') pauseGame();
+  else if (gameState === 'paused') resumeGame();
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function isTypingTarget(target) {
+  return Boolean(target && target.closest && target.closest('input, textarea, button'));
+}
+
+function renderLeaderboard() {
+  leaderboardStatusEl.textContent = leaderboardStatus;
+  if (!leaderboardScores.length) {
+    leaderboardList.innerHTML = '<li class="leaderboard-empty">No scores yet. Be the first to post one.</li>';
+    return;
+  }
+
+  leaderboardList.innerHTML = leaderboardScores.map((entry, index) => (
+    `<li class="leaderboard-item">` +
+      `<span class="leaderboard-rank">#${index + 1}</span>` +
+      `<span class="leaderboard-name">${escapeHtml(entry.name)}</span>` +
+      `<span class="leaderboard-score">${entry.score}</span>` +
+      `<span class="leaderboard-level">L${entry.level}</span>` +
+    `</li>`
+  )).join('');
+}
+
+async function loadLeaderboard() {
+  leaderboardStatus = 'Loading...';
+  renderLeaderboard();
+  try {
+    const response = await fetch(`/api/leaderboard?limit=${LEADERBOARD_LIMIT}`, { cache: 'no-store' });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Failed to load leaderboard');
+    leaderboardScores = payload.scores || [];
+    leaderboardStatus = 'Updated live';
+  } catch {
+    leaderboardStatus = 'Unavailable';
+  }
+  renderLeaderboard();
+}
+
+function renderGameOverOverlay(hasNewHighScore, submitStatus = '') {
+  const scoreLabel = `Score: ${score}`;
+  const highScoreLine = hasNewHighScore ? '<div class="hi" style="color:#ffff00">NEW HIGH SCORE!</div>' : '';
+  const disabledAttr = leaderboardSubmitting ? 'disabled' : '';
+  const buttonLabel = leaderboardSubmitting ? 'Submitting...' : 'Submit Score';
+
+  overlay.innerHTML =
+    '<div>GAME OVER</div>' +
+    `<div class="hi">${scoreLabel}</div>` +
+    highScoreLine +
+    '<form class="overlay-form" id="leaderboard-form">' +
+      '<input class="overlay-input" id="leaderboard-name-input" name="name" type="text" maxlength="16" autocomplete="nickname" placeholder="Your name" required />' +
+      `<button class="overlay-button" type="submit" ${disabledAttr}>${buttonLabel}</button>` +
+      `<div class="overlay-status" id="overlay-status">${escapeHtml(submitStatus || 'Enter your name to post to the global leaderboard.')}</div>` +
+    '</form>' +
+    '<div class="sub">Press any non-typing key to play again</div>';
+  overlay.style.display = 'flex';
+
+  const input = document.getElementById('leaderboard-name-input');
+  if (input) input.focus();
+}
+
+async function submitLeaderboardScore(name) {
+  if (!pendingLeaderboardEntry || leaderboardSubmitting) return;
+
+  leaderboardSubmitting = true;
+  renderGameOverOverlay(pendingLeaderboardEntry.isNewHighScore, 'Submitting score...');
+
+  try {
+    const response = await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        score: pendingLeaderboardEntry.score,
+        level: pendingLeaderboardEntry.level,
+      }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || 'Failed to submit score');
+
+    leaderboardScores = payload.scores || [];
+    leaderboardStatus = 'Updated live';
+    pendingLeaderboardEntry = null;
+    renderLeaderboard();
+    showOverlay('GAME OVER', 'Press any non-typing key to play again', `Score submitted for ${name.toUpperCase()}`);
+  } catch (error) {
+    leaderboardSubmitting = false;
+    renderGameOverOverlay(
+      pendingLeaderboardEntry.isNewHighScore,
+      error.message || 'Failed to submit score.'
+    );
+  }
+}
+
+function buildGrid() {
+  grid = [];
+  totalDots = 0;
+  dotsEaten = 0;
+  for (let r = 0; r < ROWS; r++) {
+    grid[r] = [];
+    for (let c = 0; c < COLS; c++) {
+      grid[r][c] = parseCell(MAP_STR[r][c]);
+      if (grid[r][c] === 1 || grid[r][c] === 3) totalDots++;
+    }
+  }
+}
+
+const PAC_START = { x: 10, y: 18 };
+let pac = { x: PAC_START.x, y: PAC_START.y, dir: 'left', nextDir: 'left', mouthAngle: 0, mouthDir: 1 };
+
+const GHOST_COLORS = ['#ff0000', '#ffb8ff', '#00ffff', '#ffb852'];
+const GHOST_NAMES = ['blinky', 'pinky', 'inky', 'clyde'];
+let ghosts = [];
+let ghostEatCombo = 0; // doubles each ghost eaten per power pellet
+
+function initGhosts() {
+  ghosts = [
+    { x: 10, y: 11, dir: 'left', color: GHOST_COLORS[0], name: 'blinky', mode: 'chase', home: false, startTick: 0, idx: 0 },
+    { x: 9,  y: 13, dir: 'up',   color: GHOST_COLORS[1], name: 'pinky',  mode: 'house', home: true, startTick: 120, idx: 1 },
+    { x: 10, y: 13, dir: 'up',   color: GHOST_COLORS[2], name: 'inky',   mode: 'house', home: true, startTick: 240, idx: 2 },
+    { x: 11, y: 13, dir: 'up',   color: GHOST_COLORS[3], name: 'clyde',  mode: 'house', home: true, startTick: 360, idx: 3 },
+  ];
+}
+
+function resetPositions() {
+  pac = { x: PAC_START.x, y: PAC_START.y, dir: 'left', nextDir: 'left', mouthAngle: 0, mouthDir: 1 };
+  initGhosts();
+  modePhase = 0;
+  modeTick = 0;
+  currentMode = 'scatter';
+}
+
+function isWalkable(x, y, isGhost) {
+  if (y < 0 || y >= ROWS) return false;
+  if (x < 0 || x >= COLS) return true;
+  const cell = grid[y][x];
+  if (cell === 0) return false;
+  if (cell === 4) return false;
+  if (cell === 5) return !!isGhost;
+  return true;
+}
+
+function canMove(x, y, dir, isGhost) {
+  let nx = x, ny = y;
+  if (dir === 'left') nx--;
+  if (dir === 'right') nx++;
+  if (dir === 'up') ny--;
+  if (dir === 'down') ny++;
+  return isWalkable(nx, ny, isGhost);
+}
+
+function doMove(entity, dir) {
+  if (dir === 'left') entity.x--;
+  if (dir === 'right') entity.x++;
+  if (dir === 'up') entity.y--;
+  if (dir === 'down') entity.y++;
+  if (entity.x < 0) entity.x = COLS - 1;
+  if (entity.x >= COLS) entity.x = 0;
+}
+
+const DIRS = ['up', 'down', 'left', 'right'];
+const OPPOSITE = { up: 'down', down: 'up', left: 'right', right: 'left' };
+
+// ---- Ghost personality targeting ----
+function getGhostTarget(ghost) {
+  // When frightened, random target
+  if (ghostFrightened > 0) {
+    return { x: Math.floor(Math.random() * COLS), y: Math.floor(Math.random() * ROWS) };
+  }
+
+  // When in scatter mode, head to home corner
+  if (currentMode === 'scatter') {
+    return SCATTER_TARGETS[ghost.idx];
+  }
+
+  // Chase mode — each ghost has unique behavior
+  switch (ghost.name) {
+    case 'blinky':
+      // Blinky: directly targets Pac-Man
+      return { x: pac.x, y: pac.y };
+
+    case 'pinky': {
+      // Pinky: targets 4 tiles ahead of Pac-Man's direction
+      let tx = pac.x, ty = pac.y;
+      if (pac.dir === 'left') tx -= 4;
+      else if (pac.dir === 'right') tx += 4;
+      else if (pac.dir === 'up') { ty -= 4; tx -= 4; } // classic overflow bug reproduced
+      else ty += 4;
+      return { x: tx, y: ty };
+    }
+
+    case 'inky': {
+      // Inky: uses Blinky's position to calculate target
+      // Target = 2 tiles ahead of pac-man, then vector from Blinky doubled
+      let ax = pac.x, ay = pac.y;
+      if (pac.dir === 'left') ax -= 2;
+      else if (pac.dir === 'right') ax += 2;
+      else if (pac.dir === 'up') ay -= 2;
+      else ay += 2;
+      const blinky = ghosts[0];
+      return { x: ax + (ax - blinky.x), y: ay + (ay - blinky.y) };
+    }
+
+    case 'clyde': {
+      // Clyde: chases Pac-Man when far, scatters when within 8 tiles
+      const dist = Math.abs(ghost.x - pac.x) + Math.abs(ghost.y - pac.y);
+      if (dist > 8) return { x: pac.x, y: pac.y };
+      return SCATTER_TARGETS[3]; // retreat to corner
+    }
+
+    default:
+      return { x: pac.x, y: pac.y };
+  }
+}
+
+function ghostAI(ghost, tick) {
+  if (ghost.mode === 'house') {
+    if (tick >= ghost.startTick) {
+      ghost.x = 10;
+      ghost.y = 11;
+      ghost.mode = currentMode;
+      ghost.home = false;
+      ghost.dir = 'left';
+    }
+    return;
+  }
+
+  const target = getGhostTarget(ghost);
+
+  const options = [];
+  for (const d of DIRS) {
+    if (d === OPPOSITE[ghost.dir]) continue;
+    if (!canMove(ghost.x, ghost.y, d, true)) continue;
+    options.push(d);
+  }
+
+  if (options.length === 0) {
+    const rev = OPPOSITE[ghost.dir];
+    if (canMove(ghost.x, ghost.y, rev, true)) options.push(rev);
+  }
+
+  if (options.length === 0) return;
+
+  let bestDir = options[0];
+  let bestDist = Infinity;
+  const flee = ghostFrightened > 0;
+
+  for (const d of options) {
+    let nx = ghost.x + (d === 'left' ? -1 : d === 'right' ? 1 : 0);
+    let ny = ghost.y + (d === 'up' ? -1 : d === 'down' ? 1 : 0);
+    if (nx < 0) nx = COLS - 1;
+    if (nx >= COLS) nx = 0;
+    const dist = (nx - target.x) ** 2 + (ny - target.y) ** 2;
+    if (flee ? dist > bestDist : dist < bestDist) {
+      bestDist = dist;
+      bestDir = d;
+    }
+  }
+
+  ghost.dir = bestDir;
+  doMove(ghost, ghost.dir);
+}
+
+// ---- Score popup system ----
+let popups = [];
+
+function addPopup(x, y, text, color) {
+  popups.push({ x: x * TILE + TILE / 2, y: y * TILE + TILE / 2, text, color, life: 60 });
+}
+
+// ---- Drawing ----
+function drawWall(x, y) {
+  ctx.fillStyle = '#2121de';
+  ctx.fillRect(x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2);
+}
+
+function drawGhostWall(x, y) {
+  ctx.fillStyle = '#444';
+  ctx.fillRect(x * TILE + 1, y * TILE + 1, TILE - 2, TILE - 2);
+}
+
+function drawGhostDoor(x, y) {
+  ctx.fillStyle = '#ffb8ae';
+  ctx.fillRect(x * TILE + 1, y * TILE + TILE / 2 - 2, TILE - 2, 4);
+}
+
+function drawDot(x, y) {
+  ctx.fillStyle = '#ffb8ae';
+  ctx.beginPath();
+  ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawPowerPellet(x, y, t) {
+  if (Math.floor(t / 15) % 2 === 0) {
+    ctx.fillStyle = '#ffb8ae';
+    ctx.beginPath();
+    ctx.arc(x * TILE + TILE / 2, y * TILE + TILE / 2, 6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function drawFruit() {
+  if (!fruit) return;
+  const ft = FRUIT_TYPES[fruit.typeIdx];
+  ctx.font = (TILE - 2) + 'px serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(ft.emoji, fruit.x * TILE + TILE / 2, fruit.y * TILE + TILE / 2);
+}
+
+function drawPacMan() {
+  const cx = pac.x * TILE + TILE / 2;
+  const cy = pac.y * TILE + TILE / 2;
+  const mouth = pac.mouthAngle * 0.45;
+  let angle = 0;
+  if (pac.dir === 'right') angle = 0;
+  else if (pac.dir === 'left') angle = Math.PI;
+  else if (pac.dir === 'up') angle = Math.PI * 1.5;
+  else angle = Math.PI * 0.5;
+
+  ctx.fillStyle = '#ffff00';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.arc(cx, cy, TILE / 2 + 2, angle + mouth, angle + Math.PI * 2 - mouth);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawGhost(ghost) {
+  const cx = ghost.x * TILE + TILE / 2;
+  const cy = ghost.y * TILE + TILE / 2;
+  const r = TILE / 2 + 1;
+  const frightened = ghostFrightened > 0;
+  const flashing = frightened && ghostFrightened < 60 && Math.floor(ghostFrightened / 8) % 2 === 0;
+
+  ctx.fillStyle = frightened ? (flashing ? '#fff' : '#2121de') : ghost.color;
+  ctx.beginPath();
+  ctx.arc(cx, cy - 2, r, Math.PI, 0);
+  ctx.lineTo(cx + r, cy + r - 2);
+  const segments = 4;
+  for (let i = 0; i < segments; i++) {
+    const sx = cx + r - (i * 2 + 1) * (r / segments);
+    const ex = cx + r - (i * 2 + 2) * (r / segments);
+    ctx.lineTo(sx, cy + r + 3);
+    ctx.lineTo(ex, cy + r - 2);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  if (!frightened) {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(cx - 4, cy - 3, 4, 0, Math.PI * 2);
+    ctx.arc(cx + 4, cy - 3, 4, 0, Math.PI * 2);
+    ctx.fill();
+    const pdx = Math.sign(pac.x - ghost.x) * 1.5;
+    const pdy = Math.sign(pac.y - ghost.y) * 1.5;
+    ctx.fillStyle = '#2121de';
+    ctx.beginPath();
+    ctx.arc(cx - 4 + pdx, cy - 3 + pdy, 2, 0, Math.PI * 2);
+    ctx.arc(cx + 4 + pdx, cy - 3 + pdy, 2, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = frightened && !flashing ? '#ffb8ae' : '#f00';
+    ctx.beginPath();
+    ctx.arc(cx - 3, cy - 2, 1.5, 0, Math.PI * 2);
+    ctx.arc(cx + 3, cy - 2, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = frightened && !flashing ? '#ffb8ae' : '#f00';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, cy + 3);
+    for (let i = 0; i < 5; i++) {
+      ctx.lineTo(cx - 5 + i * 2.5 + 1.25, cy + (i % 2 === 0 ? 5 : 2));
+    }
+    ctx.stroke();
+  }
+}
+
+function drawPopups() {
+  for (const p of popups) {
+    const alpha = p.life / 60;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = p.color;
+    ctx.font = 'bold 12px Courier New';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(p.text, p.x, p.y - (60 - p.life) * 0.5);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawReadyText() {
+  ctx.fillStyle = '#ffff00';
+  ctx.font = 'bold 20px Courier New';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('READY!', canvas.width / 2, 13 * TILE + TILE / 2);
+}
+
+function updateLives() {
+  let s = '';
+  for (let i = 0; i < lives; i++) s += '\u25CF ';
+  livesEl.textContent = s;
+}
+
+function updateFruitDisplay() {
+  fruitsEl.textContent = collectedFruits.slice(-7).map(i => FRUIT_TYPES[i].emoji).join('');
+}
+
+function updateHighScore() {
+  if (score > highScore) {
+    highScore = score;
+    saveHighScore(highScore);
+    highScoreEl.textContent = highScore;
+    return true;
+  }
+  return false;
+}
+
+let tick = 0;
+let readyTimer = 0; // countdown before level starts
+
+function update() {
+  if (gameState !== 'playing') return;
+
+  // Ready countdown at level start
+  if (readyTimer > 0) {
+    readyTimer--;
+    return;
+  }
+
+  tick++;
+
+  // Scatter/chase mode cycling
+  if (ghostFrightened <= 0) {
+    modeTick++;
+    const phase = MODE_SCHEDULE[Math.min(modePhase, MODE_SCHEDULE.length - 1)];
+    const threshold = currentMode === 'scatter' ? phase.scatter : phase.chase;
+    if (modeTick >= threshold && threshold !== Infinity) {
+      currentMode = currentMode === 'scatter' ? 'chase' : 'scatter';
+      modeTick = 0;
+      if (currentMode === 'scatter') modePhase++;
+      // Reverse all active ghosts on mode switch
+      for (const g of ghosts) {
+        if (g.mode !== 'house') {
+          g.dir = OPPOSITE[g.dir];
+          g.mode = currentMode;
+        }
+      }
+    }
+  }
+
+  // Mouth animation
+  pac.mouthAngle += 0.15 * pac.mouthDir;
+  if (pac.mouthAngle > 1) pac.mouthDir = -1;
+  if (pac.mouthAngle < 0) pac.mouthDir = 1;
+
+  const cfg = levelConfig(level);
+
+  // Move pac-man
+  if (tick % cfg.pacSpeed === 0) {
+    if (canMove(pac.x, pac.y, pac.nextDir, false)) {
+      pac.dir = pac.nextDir;
+    }
+    if (canMove(pac.x, pac.y, pac.dir, false)) {
+      doMove(pac, pac.dir);
+    }
+
+    // Eat dots
+    const cell = grid[pac.y][pac.x];
+    if (cell === 1) {
+      grid[pac.y][pac.x] = 2;
+      score += 10;
+      dotsEaten++;
+      scoreEl.textContent = score;
+      updateHighScore();
+    } else if (cell === 3) {
+      grid[pac.y][pac.x] = 2;
+      score += 50;
+      dotsEaten++;
+      scoreEl.textContent = score;
+      updateHighScore();
+      ghostFrightened = cfg.frightDuration;
+      ghostEatCombo = 0;
+      for (const g of ghosts) {
+        if (g.mode !== 'house') g.dir = OPPOSITE[g.dir];
+      }
+    }
+
+    // Eat fruit
+    if (fruit && pac.x === fruit.x && pac.y === fruit.y) {
+      const pts = FRUIT_TYPES[fruit.typeIdx].points;
+      score += pts;
+      scoreEl.textContent = score;
+      updateHighScore();
+      addPopup(fruit.x, fruit.y, pts.toString(), '#fff');
+      collectedFruits.push(fruit.typeIdx);
+      updateFruitDisplay();
+      fruit = null;
+    }
+
+    // Spawn fruit at 70 and 170 dots eaten
+    if (dotsEaten >= 70 && !fruitSpawned1) {
+      fruitSpawned1 = true;
+      const typeIdx = Math.min(level - 1, FRUIT_TYPES.length - 1);
+      fruit = { x: FRUIT_POS.x, y: FRUIT_POS.y, typeIdx, spawnTick: tick };
+    }
+    if (dotsEaten >= 170 && !fruitSpawned2) {
+      fruitSpawned2 = true;
+      const typeIdx = Math.min(level - 1, FRUIT_TYPES.length - 1);
+      fruit = { x: FRUIT_POS.x, y: FRUIT_POS.y, typeIdx, spawnTick: tick };
+    }
+
+    // Win — advance level
+    if (dotsEaten >= totalDots) {
+      level++;
+      levelEl.textContent = level;
+      buildGrid();
+      resetPositions();
+      fruit = null;
+      fruitSpawned1 = false;
+      fruitSpawned2 = false;
+      ghostEatCombo = 0;
+      readyTimer = 120;
+      tick = 0;
+      return;
+    }
+  }
+
+  // Fruit timeout
+  if (fruit && tick - fruit.spawnTick > FRUIT_DURATION) {
+    fruit = null;
+  }
+
+  // Move ghosts
+  const ghostSpd = ghostFrightened > 0 ? cfg.frightSpeed : cfg.ghostSpeed;
+  if (tick % ghostSpd === 0) {
+    for (const ghost of ghosts) {
+      ghostAI(ghost, tick);
+    }
+  }
+
+  if (ghostFrightened > 0) ghostFrightened--;
+
+  // Update popups
+  popups = popups.filter(p => { p.life--; return p.life > 0; });
+
+  // Collision
+  for (const g of ghosts) {
+    if (g.mode === 'house') continue;
+    if (g.x === pac.x && g.y === pac.y) {
+      if (ghostFrightened > 0) {
+        ghostEatCombo++;
+        const pts = 200 * Math.pow(2, ghostEatCombo - 1);
+        score += pts;
+        scoreEl.textContent = score;
+        updateHighScore();
+        addPopup(g.x, g.y, pts.toString(), '#00ffff');
+        g.x = 10; g.y = 13; g.mode = 'house'; g.home = true;
+        g.startTick = tick + 120;
+      } else {
+        lives--;
+        updateLives();
+        if (lives <= 0) {
+          const hasNewHighScore = score > highScore;
+          gameState = 'lost';
+          updateHighScore();
+          pendingLeaderboardEntry = {
+            score,
+            level,
+            isNewHighScore: hasNewHighScore,
+          };
+          leaderboardSubmitting = false;
+          renderGameOverOverlay(hasNewHighScore);
+          return;
+        }
+        resetPositions();
+        readyTimer = 90;
+        return;
+      }
+    }
+  }
+}
+
+function draw() {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = grid[r][c];
+      if (cell === 0) drawWall(c, r);
+      else if (cell === 4) drawGhostWall(c, r);
+      else if (cell === 5) drawGhostDoor(c, r);
+      else if (cell === 1) drawDot(c, r);
+      else if (cell === 3) drawPowerPellet(c, r, tick);
+    }
+  }
+
+  drawFruit();
+
+  if (gameState === 'playing') {
+    if (readyTimer > 0) {
+      drawReadyText();
+      // Still draw pac and ghosts in position
+      drawPacMan();
+      for (const ghost of ghosts) {
+        if (ghost.mode !== 'house') drawGhost(ghost);
+      }
+    } else {
+      drawPacMan();
+      for (const ghost of ghosts) {
+        if (ghost.mode !== 'house') drawGhost(ghost);
+        else if (tick >= ghost.startTick - 60) drawGhost(ghost);
+      }
+    }
+    drawPopups();
+  }
+}
+
+function stepFrame() {
+  update();
+  draw();
+}
+
+function gameLoop() {
+  if (!window.__codexManualStep) {
+    stepFrame();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+function startGame() {
+  pendingLeaderboardEntry = null;
+  leaderboardSubmitting = false;
+  score = 0;
+  lives = 3;
+  level = 1;
+  ghostFrightened = 0;
+  ghostEatCombo = 0;
+  collectedFruits = [];
+  fruit = null;
+  fruitSpawned1 = false;
+  fruitSpawned2 = false;
+  scoreEl.textContent = '0';
+  levelEl.textContent = '1';
+  highScoreEl.textContent = highScore;
+  updateLives();
+  updateFruitDisplay();
+  buildGrid();
+  resetPositions();
+  gameState = 'playing';
+  hideOverlay();
+  tick = 0;
+  readyTimer = 120;
+}
+
+function setDirection(dir) {
+  if (gameState === 'paused') return;
+  if (gameState !== 'playing') {
+    startGame();
+  }
+  pac.nextDir = dir;
+}
+
+// Input
+document.addEventListener('keydown', async (e) => {
+  const key = e.key.toLowerCase();
+  const typing = isTypingTarget(e.target);
+
+  if (key === 'f') {
+    if (typing) return;
+    e.preventDefault();
+    try {
+      await toggleFullscreen();
+      updateLayout();
+    } catch {
+      // Ignore fullscreen failures so keyboard input still works normally.
+    }
+    return;
+  }
+
+  if (key === 'p') {
+    if (typing) return;
+    e.preventDefault();
+    togglePause();
+    return;
+  }
+
+  if (e.key === 'Escape' && document.fullscreenElement) {
+    if (typing) return;
+    e.preventDefault();
+    try {
+      await document.exitFullscreen();
+      updateLayout();
+    } catch {
+      // Ignore fullscreen exit failures.
+    }
+    return;
+  }
+
+  if (typing) return;
+
+  if (gameState === 'paused') {
+    e.preventDefault();
+    return;
+  }
+
+  if (gameState !== 'playing') {
+    startGame();
+    return;
+  }
+
+  switch (key) {
+    case 'arrowleft': case 'a': pac.nextDir = 'left'; break;
+    case 'arrowright': case 'd': pac.nextDir = 'right'; break;
+    case 'arrowup': case 'w': pac.nextDir = 'up'; break;
+    case 'arrowdown': case 's': pac.nextDir = 'down'; break;
+    default: return;
+  }
+  e.preventDefault();
+});
+
+overlay.addEventListener('submit', async (e) => {
+  const form = e.target;
+  if (!(form instanceof HTMLFormElement) || form.id !== 'leaderboard-form') return;
+
+  e.preventDefault();
+  const formData = new FormData(form);
+  const name = String(formData.get('name') || '').trim();
+  await submitLeaderboardScore(name);
+});
+
+// Touch
+let touchX = 0, touchY = 0;
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  if (gameState !== 'playing') { startGame(); return; }
+  if (!e.touches.length) return;
+  touchX = e.touches[0].clientX;
+  touchY = e.touches[0].clientY;
+}, { passive: false });
+canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+canvas.addEventListener('touchend', (e) => {
+  if (!e.changedTouches.length) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  const dy = e.changedTouches[0].clientY - touchY;
+  if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+  if (Math.abs(dx) > Math.abs(dy)) setDirection(dx > 0 ? 'right' : 'left');
+  else setDirection(dy > 0 ? 'down' : 'up');
+});
+
+window.render_game_to_text = function renderGameToText() {
+  const payload = {
+    coordinateSystem: {
+      origin: 'top-left',
+      xDirection: 'right',
+      yDirection: 'down',
+      tileSize: TILE,
+      grid: { cols: COLS, rows: ROWS },
+    },
+    mode: gameState,
+    score,
+    highScore,
+    lives,
+    level,
+    tick,
+    readyTimer,
+    ghostFrightened,
+    currentMode,
+    fullscreen: Boolean(document.fullscreenElement),
+    dotsRemaining: totalDots - dotsEaten,
+    leaderboard: leaderboardScores.slice(0, 5).map((entry, index) => ({
+      rank: index + 1,
+      name: entry.name,
+      score: entry.score,
+      level: entry.level,
+    })),
+    fruit: fruit ? { x: fruit.x, y: fruit.y, type: FRUIT_TYPES[fruit.typeIdx].name } : null,
+    player: {
+      x: pac.x,
+      y: pac.y,
+      dir: pac.dir,
+      nextDir: pac.nextDir,
+    },
+    ghosts: ghosts.map((ghost) => ({
+      name: ghost.name,
+      x: ghost.x,
+      y: ghost.y,
+      dir: ghost.dir,
+      mode: ghost.mode,
+      home: ghost.home,
+    })),
+  };
+  return JSON.stringify(payload);
+};
+
+window.advanceTime = function advanceTime(ms) {
+  const frameDuration = 1000 / 60;
+  const steps = Math.max(1, Math.round((Number(ms) || frameDuration) / frameDuration));
+  const previousManualStep = window.__codexManualStep;
+  window.__codexManualStep = true;
+  for (let i = 0; i < steps; i++) {
+    stepFrame();
+  }
+  window.__codexManualStep = previousManualStep;
+  return window.render_game_to_text();
+};
+
+for (const button of controlButtons) {
+  button.addEventListener('click', () => {
+    setDirection(button.dataset.dir);
+  });
+}
+
+buildGrid();
+updateLives();
+updateLayout();
+renderLeaderboard();
+loadLeaderboard();
+window.addEventListener('resize', updateLayout);
+document.addEventListener('fullscreenchange', updateLayout);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', updateLayout);
+}
+gameLoop();
+</script>
+</body>
+</html>
