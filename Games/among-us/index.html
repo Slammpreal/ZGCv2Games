@@ -1,24 +1,270 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <meta charset="UTF-8" />
-        <title>Among Us | ZGC</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
-        <link rel="apple-touch-icon" sizes="256x256" href="img/red.png" />
-        <link rel="icon" type="image/png" href="img/red.png" />
-        <link rel="stylesheet" href="style.css" />
-    </head>
-    <script src="/js/main.js"></script>
-    <body>
-        <noscript>
-            <div id="notSupportedWrap">
-                <h2 id="notSupportedTitle">This content requires JavaScript</h2>
-                <p class="notSupportedMessage">JavaScript appears to be disabled. Please enable it to view this content. Thanks! :)</p>
-            </div>
-        </noscript>
-        <script src="scripts/supportcheck.js"></script>
-        <script src="scripts/offlineclient.js" type="module"></script>
-        <script src="scripts/main.js" type="module"></script>
-        <script src="scripts/register-sw.js" type="module"></script>
-    </body>
+<html lang="en-us">
+<head>
+<base href="https://cdn.jsdelivr.net/gh/wasmdotrip/wasm.rip@main/files/amongus/">
+<meta charset="utf-8">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Among Us</title>
+<style>
+  body, html { 
+    padding: 0; 
+    margin: 0; 
+    overflow: hidden; 
+    background: #000; 
+    height: 100%;
+    width: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  }
+  
+  #gameContainer { 
+    width: 100%; 
+    height: 100%; 
+    position: absolute; 
+    left: 0;
+    top: 0;
+    background: #000;
+  }
+  
+  #gameContainer canvas { 
+    display: block;
+    width: 100vw !important; 
+    height: 100vh !important; 
+    outline: none;
+    object-fit: fill !important;
+  }
+
+  #loading-overlay { 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(10, 10, 10, 0.95); 
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex; 
+    flex-direction: column;
+    align-items: center; 
+    justify-content: center;
+    z-index: 1000; 
+    transition: opacity 0.5s ease; 
+  }
+  
+  #loading-overlay.hidden { 
+    opacity: 0; 
+    pointer-events: none; 
+  }
+
+  .loader-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+  }
+
+  .spinner {
+    width: 64px;
+    height: 64px;
+    border: 4px solid rgba(255, 153, 0, 0.15);
+    border-top-color: #ff9900;
+    border-radius: 50%;
+    animation: spin 1s infinite cubic-bezier(0.55, 0.055, 0.675, 0.19);
+    filter: drop-shadow(0 0 12px rgba(255, 153, 0, 0.6));
+    margin-bottom: 10px;
+  }
+
+  #loading-title { 
+    color: #ccc; 
+    font-family: 'Segoe UI', sans-serif; 
+    font-size: 24px; 
+    font-weight: 300; 
+    letter-spacing: 1px; 
+    margin-bottom: 10px; 
+  }
+
+  .loading-status {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-align: center;
+    text-shadow: 0 0 8px rgba(255,255,255,0.3);
+  }
+
+  .loading-filename {
+    color: #a29bb0;
+    font-size: 11px;
+    font-family: monospace;
+    margin-bottom: 5px;
+  }
+
+  #loading-bar-track { 
+    width: 260px; 
+    height: 6px; 
+    background: rgba(255, 255, 255, 0.08); 
+    border-radius: 20px; 
+    overflow: hidden; 
+    position: relative;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.4);
+  }
+  
+  #loading-bar-fill { 
+    height: 100%; 
+    width: 0%; 
+    border-radius: 20px; 
+    background: linear-gradient(90deg, #ff9900, #ffbb33, #ff9900); 
+    background-size: 200% 100%; 
+    transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+    box-shadow: 0 0 10px rgba(255, 153, 0, 0.8);
+  }
+
+  .fullscreen-button { 
+    display: inline-block; 
+    padding: 10px 18px; 
+    background-color: rgba(10, 10, 10, 0.9); 
+    color: #ffffff !important; 
+    border: 2px solid #ff9900; 
+    border-radius: 6px; 
+    font-family: 'Segoe UI', sans-serif; 
+    font-size: 13px; 
+    font-weight: bold; 
+    letter-spacing: 0.5px; 
+    cursor: pointer; 
+    text-decoration: none !important; 
+    position: fixed; 
+    bottom: 20px; 
+    right: 20px; 
+    z-index: 1002; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5); 
+    transition: all 0.3s ease; 
+  }
+  
+  .fullscreen-button:hover { 
+    background-color: #ff9900 !important; 
+    box-shadow: 0 0 15px rgba(255, 153, 0, 0.6); 
+    transform: translateY(-2px); 
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loader-wrapper">
+    <div class="spinner"></div>
+    <div id="loading-title">Among Us</div>
+    <div id="loading-text" class="loading-status">Connecting... 0%</div>
+    <div id="loading-file" class="loading-filename">Initializing multiplayer manifest</div>
+    <div id="loading-bar-track">
+      <div id="loading-bar-fill"></div>
+    </div>
+  </div>
+</div>
+
+<button class="fullscreen-button" type="button" onclick="openFullscreen(this)">FULLSCREEN</button>
+
+<div class="webgl-content">
+  <div id="gameContainer"></div>
+</div>
+
+<script>
+  const runnerScript = `
+    window.serverurl = "wss://nostaligafun.pages.dev";
+    var cdn = 'https://cdn.jsdelivr.net/gh/wasmdotrip/wasm.rip@main/files/amongus/';
+
+    function fixUrl(url) {
+      if (typeof url !== 'string') return url;
+      var target = url;
+      if (target.indexOf('://') === -1 && target.charAt(0) === '/') target = target.slice(1);
+      if (target.indexOf('://') === -1 && !target.startsWith('blob:')) {
+        return cdn + target;
+      }
+      return url;
+    }
+
+    var oldOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url) {
+      var argumentsList = Array.prototype.slice.call(arguments);
+      argumentsList[1] = fixUrl(url);
+      return oldOpen.apply(this, argumentsList);
+    };
+
+    var oldFetch = window.fetch;
+    window.fetch = function(input, init) {
+      if (typeof input === 'string') {
+        input = fixUrl(input);
+      } else if (input && input.url) {
+        var corrected = fixUrl(input.url);
+        if (corrected !== input.url) input = new Request(corrected, input);
+      }
+      return oldFetch.call(this, input, init);
+    };
+
+    function resizeCanvas() {
+      var canvasElement = document.querySelector("#gameContainer canvas");
+      if (!canvasElement) return;
+      var w = window.innerWidth, h = window.innerHeight;
+      canvasElement.width = w; 
+      canvasElement.height = h;
+      canvasElement.style.setProperty("width", "100vw", "important");
+      canvasElement.style.setProperty("height", "100vh", "important");
+    }
+    window.addEventListener("resize", resizeCanvas);
+    setInterval(resizeCanvas, 250);
+
+    var loaderScript = document.createElement('script');
+    loaderScript.src = cdn + 'Build/UnityLoader.js';
+    loaderScript.onload = function() {
+      window.gameInstance = UnityLoader.instantiate("gameContainer", cdn + "Build/AmongUSWebPortByTSProllyFinalBuild6.json", {
+        onProgress: function(game, val) {
+          var pct = Math.floor(val * 100);
+          var bar = document.getElementById('loading-bar-fill');
+          var statusLabel = document.getElementById('loading-text');
+          var fileLabel = document.getElementById('loading-file');
+          
+          if(bar) bar.style.width = pct + '%';
+          if(statusLabel) statusLabel.innerText = 'Assembling Assets... ' + pct + '%';
+          if(fileLabel) {
+            if(val < 0.3) fileLabel.innerText = "Streaming: WebGL.framework.js";
+            else if(val < 0.8) fileLabel.innerText = "Streaming: AmongUSWebPortByTSProllyFinalBuild6.data.unityweb";
+            else if(val < 1.0) fileLabel.innerText = "Streaming: AmongUSWebPortByTSProllyFinalBuild6.wasm.code.unityweb";
+            else fileLabel.innerText = "Launching WebGL Instance";
+          }
+
+          if (val === 1) {
+            setTimeout(function() {
+              var box = document.getElementById('loading-overlay');
+              if (box) box.classList.add('hidden');
+            }, 800);
+          }
+        }
+      });
+    };
+    document.body.appendChild(loaderScript);
+  `;
+
+  eval(runnerScript);
+
+  function openFullscreen(element) { 
+    try { 
+      var frame = window.open("about:blank", "_blank"); 
+      if (frame) { 
+        if (element) element.style.display = 'none'; 
+        
+        var layout = '<!DOCTYPE html><html lang="en-us"><head><meta charset="utf-8"><title>Among Us</title><base href="https://cdn.jsdelivr.net/gh/wasmdotrip/wasm.rip@main/files/amongus/"><style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}#gameContainer{width:100%;height:100%;position:absolute;left:0;top:0;background:#000}#gameContainer canvas{display:block;width:100vw!important;height:100vh!important;outline:none;object-fit:fill!important;}#loading-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,10,10,0.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1000;transition:opacity 0.5s ease;}#loading-overlay.hidden{opacity:0;pointer-events:none;}.loader-wrapper{display:flex;flex-direction:column;align-items:center;gap:15px;}.spinner{width:64px;height:64px;border:4px solid rgba(255,153,0,0.15);border-top-color:#ff9900;border-radius:50%;animation:spin 1s infinite cubic-bezier(0.55,0.055,0.675,0.19);filter:drop-shadow(0 0 12px rgba(255,153,0,0.6));margin-bottom:10px;}#loading-title{color:#ccc;font-family:\'Segoe UI\',sans-serif;font-size:24px;font-weight:300;letter-spacing:1px;margin-bottom:10px;}.loading-status{color:#ffffff;font-size:13px;font-weight:500;letter-spacing:0.5px;text-align:center;text-shadow:0 0 8px rgba(255,255,255,0.3);}.loading-filename{color:#a29bb0;font-size:11px;font-family:monospace;margin-bottom:5px;}#loading-bar-track{width:260px;height:6px;background:rgba(255,255,255,0.08);border-radius:20px;overflow:hidden;position:relative;box-shadow:inset 0 1px 3px rgba(0,0,0,0.4);}#loading-bar-fill{height:100%;width:0%;border-radius:20px;background:linear-gradient(90deg,#ff9900,#ffbb33,#ff9900);background-size:200% 100%;transition:width 0.2s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 10px rgba(255,153,0,0.8);}@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style></head><body><div id="loading-overlay"><div class="loader-wrapper"><div class="spinner"></div><div id="loading-title">Among Us</div><div id="loading-text" class="loading-status">Connecting... 0%</div><div id="loading-file" class="loading-filename">Initializing multiplayer manifest</div><div id="loading-bar-track"><div id="loading-bar-fill"></div></div></div></div><div class="webgl-content"><div id="gameContainer"></div></div><script>' + runnerScript + '<\/script></body></html>';
+
+        frame.document.open(); 
+        frame.document.write(layout); 
+        frame.document.close(); 
+      } 
+    } catch (err) { 
+      console.error(err); 
+    } 
+  }
+</script>
+</body>
 </html>
